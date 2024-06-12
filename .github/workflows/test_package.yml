@@ -1,11 +1,12 @@
 name: Run package tests
 
 on:
-
-  pull_request:
-    # The CI is executed on every pull request to the main branch
+  push:
     branches:
-      - main
+      - "*"
+  pull_request:
+    branches:
+      - "*"
 
   # This workflow can be executed inside another workfow file
   workflow_call:
@@ -21,8 +22,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -30,9 +31,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: "Install mypackage"
+      - name: "Install ensemblecontrol"
         run: pip install .[test]
 
       - name: Run tests
