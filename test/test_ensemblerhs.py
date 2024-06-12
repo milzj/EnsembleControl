@@ -30,3 +30,12 @@ def test_ensemblerhs():
         erhs_xuk = ensemble_rhs(Y=[1.0, 0.0], u=[-1.0, 1.0])
         assert erhs_xuk["rhs"][0] == -1.0
         assert erhs_xuk["rhs"][1] == 3.0
+
+        samples = [2.0, -2.0]
+
+        ensemble_rhs, ensemble_initial_value = ensemblecontrol.EnsembleRHS(parametric_rhs, objective, u,
+                parameterized_initial_value, samples, 2)
+
+        erhs_xuk = ensemble_rhs(Y=[1.0, 0.0, 2.0, 0.0], u=[-1.0, 1.0])
+        assert erhs_xuk["rhs"][2] == -1.0
+        assert erhs_xuk["rhs"][3] == -3.0
