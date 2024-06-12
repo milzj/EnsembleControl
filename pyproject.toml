@@ -4,13 +4,12 @@ requires = ["setuptools>=61.0.0", "wheel"]
  # See https://python-poetry.org/docs/pyproject/ for more keywords for the project table
 [project]
  # Name of your package
-name = "mypackage"
+name = "ensemblecontrol"
 authors = [
-    {name = "Jørgen S. Dokken", email = "dokken@simula.no"},
-    {name = "Henrik N. Finsberg", email = "henriknf@simula.no"}
+    {name = "Johannes Milz", email = "johannes.milz@isye.gatech.edu"}
     ]
-version = "0.2.0.dev0"
-description = "Minimal package for adding two numbers"
+version = "0.0.1.dev0"
+description = "Ensemble control for ODEs"
 # "readme" the description field in your package, see: https://python-poetry.org/docs/pyproject/#readme
 readme = "README.md"
 requires-python = ">=3.8"
@@ -18,9 +17,12 @@ requires-python = ">=3.8"
 license = {file = "LICENSE"}
 # Direct dependencies
 dependencies = [
-    'numpy'
+    "matplotlib",
+    "numpy>=1.25",
+    "scipy",
+    "casadi",
+    "pandas[output-formatting]",
 ]
-
 
 [project.optional-dependencies]
 test = [
@@ -44,7 +46,7 @@ pypi = [
     "build" # Used for building wheels and uploading to pypi
 ]
 
-all = ["mypackage[test,docs,binder,pypi]"]
+all = ["ensemblecontrol[test,docs,binder,pypi]"]
 
 [tool.mypy]
 ignore_missing_imports = true # Does not show errors when importing untyped libraries
@@ -60,7 +62,7 @@ files = [  # Folder to which files that should be checked by mypy
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
-    "--cov=mypackage",
+    "--cov=ensemblecontrol",
     "--cov-report=html",
     "--cov-report=term-missing",
     "-v"]
