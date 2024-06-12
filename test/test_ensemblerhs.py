@@ -24,7 +24,7 @@ def test_ensemblerhs():
 
         samples = [2.0]
 
-        ensemble_rhs = ensemblecontrol.EnsembleRHS(parametric_rhs, objective, u,
+        ensemble_rhs, ensemble_initial_value = ensemblecontrol.EnsembleRHS(parametric_rhs, objective, u,
                 parameterized_initial_value, samples, 2)
 
         erhs_xuk = ensemble_rhs(Y=[1.0, 0.0], u=[-1.0, 1.0])
