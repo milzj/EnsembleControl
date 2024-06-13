@@ -53,5 +53,5 @@ def test_single_shooting_problem():
     obj = Function("objective", [decisions], [objective])
 
     assert np.linalg.norm(w0) == 0.0
-    assert np.abs(objective(w0)-np.exp(1.0))/np.exp(1.0) < 1e-2
+    assert np.abs(obj(w0)-np.exp(1.0))/np.exp(1.0) < 1e-2
     assert len(w0) == N
