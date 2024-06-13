@@ -50,3 +50,4 @@ def test_single_shooting_problem():
 
     assert np.linalg.norm(w0) == 0.0
     assert objective(w0) == 1.0
+    assert len(w0) == N
