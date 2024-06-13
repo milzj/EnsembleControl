@@ -53,4 +53,4 @@ def SingleShootingProblem(objective_function,
     constraints = vertcat(*g)
     decisions = vertcat(*w)
 
-    return objective, constraints, decisions, w0, lbw, ubw, lbg, ubg
+    return objective, constraints, decisions, w0, [lbw, ubw, lbg, ubg]

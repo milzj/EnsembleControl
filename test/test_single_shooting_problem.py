@@ -45,13 +45,13 @@ def test_single_shooting_problem():
     # min x(t_f)
     objective_function = lambda x: x
 
-    objective, constraints, decisions, w0, lbw, ubw, lbg, ubg = \
+    objective, constraints, decisions, initial_decisions, bound_constraints = \
                 ensemblecontrol.SingleShootingProblem(objective_function,
                                                         dynamics, initial_state,
                                                         [lbu, ubu], 1, N)
 
     obj = Function("objective", [decisions], [objective])
 
-    assert np.linalg.norm(w0) == 0.0
-    assert np.abs(obj(w0)-np.exp(1.0))/np.exp(1.0) < 1e-2
+    assert np.linalg.norm(initial_decisions) == 0.0
+    assert np.abs(obj(initial_decisions)-np.exp(1.0))/np.exp(1.0) < 1e-2
     assert len(w0) == N
