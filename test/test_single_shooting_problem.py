@@ -33,7 +33,7 @@ def test_single_shooting_problem():
 
     V, W = f(X, U)
     X += mesh_width*V
-    Q += mesh_width*W
+    Q = mesh_width*W
 
     # Discrete time dynamics function
     dynamics = Function('F', [X,U], [xj], ["x0", "p"], ["xf", "qf"])
