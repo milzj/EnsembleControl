@@ -4,7 +4,7 @@ import ensemblecontrol
 from casadi import *
 
 
-def test_single_shooting_problem():
+def test_multiple_shooting_problem():
     # https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_single_shooting.py
 
     T = 1. # Time horizon
@@ -46,7 +46,7 @@ def test_single_shooting_problem():
     objective_function = lambda x: x
 
     objective, constraints, decisions, initial_decisions, bound_constraints = \
-                ensemblecontrol.SingleShootingProblem(objective_function,
+                ensemblecontrol.MultipleShootingProblem(objective_function,
                                                         dynamics, initial_state,
                                                         [lbu, ubu], 1, N)
 
