@@ -1,6 +1,8 @@
 from casadi import *
 
-def EnsembleRHS(parameterized_rhs, objective, control,
+def EnsembleRHS(parameterized_rhs,
+                objective,
+                control,
                 parameterized_initial_value,
                 samples, nstates):
 
@@ -19,4 +21,5 @@ def EnsembleRHS(parameterized_rhs, objective, control,
 
     EnsembleRHS = Function("ensembleRHS", [Y, control], [Ydot, objective],
                            ["Y", "u"], ["rhs", "objective"])
+
     return EnsembleRHS, ensemble_initial_value
