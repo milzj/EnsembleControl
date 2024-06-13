@@ -38,7 +38,8 @@ class ControlProblem(object):
 
     @property
     def ncontrols(self):
-        return len(self.control_bounds[0])
+        lower_bounds = self.control_bounds[0]
+        return len(lower_bounds)
 
     @property
     def nominal_param(self):
