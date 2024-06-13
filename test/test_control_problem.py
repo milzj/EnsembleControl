@@ -6,7 +6,7 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
 
     def __init__(self):
 
-        super.__init__()
+        super().__init__()
 
         self._alpha = .5
         self._nintervals = 100
