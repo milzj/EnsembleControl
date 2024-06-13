@@ -28,15 +28,17 @@ def test_single_shooting_problem():
     # right-hand side and objective
     f = Function('f', [x, u], [xdot, L])
 
-    X = MX.sym("X")
+    X0 = MX.sym("X")
     U = MX.sym("U")
+    X = X0
+    Q = 0.0
 
     V, W = f(X, U)
     X += mesh_width*V
-    Q = mesh_width*W
+    Q += mesh_width*W
 
     # Discrete time dynamics function
-    dynamics = Function('F', [X,U], [xj], ["x0", "p"], ["xf", "qf"])
+    dynamics = Function('F', [X0,U], [X, Q], ["x0", "p"], ["xf", "qf"])
 
     # min x(t_f)
     objective_function = lambda x: x
