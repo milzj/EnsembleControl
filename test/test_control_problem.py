@@ -1,6 +1,6 @@
 from casadi import *
 import numpy as np
-import ensembleControl
+import ensemblecontrol
 
 class DoubleIntegrator(ensemblecontrol.ControlProblem):
 
