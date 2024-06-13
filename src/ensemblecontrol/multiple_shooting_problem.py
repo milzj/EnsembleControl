@@ -5,7 +5,6 @@ def MultipleShootingProblem(objective_function,
                             dynamics,
                             initial_state,
                             control_bounds,
-                            initial_state,
                             nsamples,
                             nintervals):
 
