@@ -4,7 +4,8 @@ def EnsembleRHS(parameterized_rhs,
                 objective,
                 control,
                 parameterized_initial_value,
-                samples, nstates):
+                samples,
+                nstates):
 
     # ensemble right hand side
     ensemble_initial_value = []
