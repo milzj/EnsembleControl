@@ -1,12 +1,12 @@
 from casadi import *
 
 
-def SingleShootingOptimizationProblem(objective_function,
-                                        dynamics,
-                                        initial_state,
-                                        control_bounds,
-                                        nsamples,
-                                        nintervals):
+def SingleShootingProblem(objective_function,
+                            dynamics,
+                            initial_state,
+                            control_bounds,
+                            nsamples,
+                            nintervals):
 
     # Start with an empty NLP
     # Adapted from https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_multiple_shooting.py
