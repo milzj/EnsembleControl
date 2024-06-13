@@ -48,14 +48,14 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
         return self.xdot
 
     @property
-    def control_regularizer(self):
+    def integral_cost_function(self):
         return self.L
 
     def parameterized_initial_state(self, params):
         # parameterized initial value
         return 2*[1.0]
 
-    def objective_function(self, x):
+    def final_cost_function(self, x):
         # Objective function to be evaluated
         # at states at final time
         # Notation F in manuscript
@@ -70,7 +70,7 @@ def test_control_problem():
 
     assert double_integrator.nstates == 2
     assert double_integrator.ncontrols == 1
-    assert double_integrator.alpha == .5
+    assert double_integrator.alpha == 1.
     assert double_integrator.final_time == 1.
     assert double_integrator.nparams == 1
     assert double_integrator.mesh_width == 0.01

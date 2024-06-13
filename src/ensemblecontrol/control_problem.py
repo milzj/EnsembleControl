@@ -70,14 +70,14 @@ class ControlProblem(object):
         return NotImplementedError()
 
     @property
-    def control_regularizer(self):
+    def integral_cost_function(self):
         return NotImplementedError()
 
     def parameterized_initial_state(self, params):
         # parameterized initial value
         return NotImplementedError()
 
-    def objective_function(self, x):
+    def final_cost_function(self, x):
         # Objective function to be evaluated
         # at states at final time
         # Notation F in manuscript
