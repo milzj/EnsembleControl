@@ -28,7 +28,6 @@ def MultipleShootingProblem(objective_function,
     nstates = len(initial_state)
     ncontrols = len(lbu)
 
-
     # "Lift" initial conditions
     Xk  = MX.sym('X0', nstates)
     w   += [Xk]
