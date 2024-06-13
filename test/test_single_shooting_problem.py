@@ -41,7 +41,7 @@ def test_single_shooting_problem():
     # min x(t_f)
     objective_function = lambda x: x
 
-    objective, constraints, decisions, w0, lbw, ubw, lbg, ubg =
+    objective, constraints, decisions, w0, lbw, ubw, lbg, ubg = \
                 ensemblecontrol.SingleShootingProblem(objective_function,
                                                         dynamics, initial_state,
                                                         [lbu, ubu], 1, N)
