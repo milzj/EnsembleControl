@@ -25,17 +25,10 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
         self._nominal_param = [0]
         self._param_initial_state = [1.0]
 
+    @property
     def control_bounds(self):
         # lower and upper bounds
         return self._control_bounds
-
-    @property
-    def ncontrols(self):
-        return len(self.control_bounds[0])
-
-    @property
-    def nominal_param(self):
-        return self._nominal_param
 
     @property
     def control(self):
