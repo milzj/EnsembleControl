@@ -55,7 +55,7 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
 
     def parameterized_initial_state(self, params):
         # parameterized initial value
-        return [1.0]
+        return 2*[1.0]
 
     def objective_function(self, x):
         # Objective function to be evaluated
