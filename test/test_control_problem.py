@@ -2,7 +2,7 @@ from casadi import *
 import numpy as np
 import ensemblecontrol
 
-from double_integrator import DoubleIntegrator
+from .double_integrator import DoubleIntegrator
 
 
 def test_control_problem():
