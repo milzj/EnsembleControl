@@ -56,6 +56,6 @@ def test_single_shooting_problem():
 
 
     assert np.linalg.norm(initial_decisions) == 0.0
-    assert len(initial_decisions) == 2*N
     assert len(lbw) == len(initial_decisions)
-    assert len(lbg) == N
+    assert len(initial_decisions) == 2*N+1
+    assert len(lbg) == N-1
