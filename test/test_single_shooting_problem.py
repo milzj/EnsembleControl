@@ -53,5 +53,6 @@ def test_single_shooting_problem():
     obj = Function("objective", [decisions], [objective])
 
     assert np.linalg.norm(initial_decisions) == 0.0
-    assert np.abs(obj(initial_decisions)-np.exp(1.0))/np.exp(1.0) < 1e-2
+    # https://www.wolframalpha.com/input?i=use+Euler+method+y%27+%3D+y%2C+y%280%29+%3D+1%2C+from+0+to+1%2C+h+%3D+1%2F100
+    assert np.abs(obj(initial_decisions)-2.70481)/2.70481 < 1e-5
     assert len(w0) == N
