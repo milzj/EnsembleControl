@@ -14,6 +14,8 @@ def test_single_shooting_problem():
 
     lbu = [-1.]
     ubu = [1.]
+    alpha = 1e-3
+
 
     # Declare model variables
     x = MX.sym('x')
@@ -23,7 +25,7 @@ def test_single_shooting_problem():
     xdot = x + u
 
     # Objective term
-    L = u**2
+    L = (alpha/2)*u**2
 
     # right-hand side and objective
     f = Function('f', [x, u], [xdot, L])
@@ -48,6 +50,8 @@ def test_single_shooting_problem():
                                                         dynamics, initial_state,
                                                         [lbu, ubu], 1, N)
 
+    obj = Function("objective", [decisions], [objective])
+
     assert np.linalg.norm(w0) == 0.0
-    assert objective(w0) == 1.0
+    assert obj(w0) == 1.0
     assert len(w0) == N
