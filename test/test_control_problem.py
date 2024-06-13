@@ -8,7 +8,7 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
 
         super().__init__()
 
-        self._alpha = .5
+        self._alpha = 1.0
         self._nintervals = 100
         self._final_time = 1.
         self._ncontrols = 1
