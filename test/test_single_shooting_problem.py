@@ -8,7 +8,7 @@ def test_single_shooting_problem():
     # https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_single_shooting.py
 
     T = 1. # Time horizon
-    N = 10 # number of control intervals
+    N = 1000 # number of control intervals
     mesh_width = T/N
     initial_state = [1.0]
 
@@ -53,5 +53,5 @@ def test_single_shooting_problem():
     obj = Function("objective", [decisions], [objective])
 
     assert np.linalg.norm(w0) == 0.0
-    assert obj(w0) == 1.0
+    assert np.abs(objective(w0)-np.exp(1.0))/np.exp(1.0) < 1e-2
     assert len(w0) == N
