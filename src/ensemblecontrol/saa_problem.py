@@ -14,6 +14,8 @@ class SAAProblem(object):
         self.samples = samples
         self.nsamples = len(samples)
 
+        self.ensemblerhs()
+        self.optimization_problem()
 
         def ensemblerhs(self):
 
@@ -63,7 +65,7 @@ class SAAProblem(object):
                                         Problem(final_cost_function,
                                                 dynamics,
                                                 ensemble_initial_state,
-                                                control_bounds
+                                                control_bounds,
                                                 nsamples,
                                                 nintervals)
 
