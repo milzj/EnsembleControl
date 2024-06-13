@@ -49,4 +49,4 @@ def test_single_shooting_problem():
                                                         [lbu, ubu], 1, N)
 
     assert np.linalg.norm(w0) == 0.0
-    assert objective(decisions) == 1.0
+    assert objective(w0) == 1.0
