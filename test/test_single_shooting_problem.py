@@ -12,8 +12,8 @@ def test_single_shooting_problem():
     mesh_width = T/N
     initial_state = [1.0]
 
-    lbu = -1.
-    ubu = 1.
+    lbu = [-1.]
+    ubu = [1.]
 
     # Declare model variables
     x = MX.sym('x')
