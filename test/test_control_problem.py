@@ -78,7 +78,7 @@ def test_control_problem():
     x = double_integrator.x
     u = double_integrator.u
     xdot = double_integrator.xdot
-    L = self.L
+    L = double_integrator.L
     f = Function('f', [x, u], [xdot, L])
 
     assert f([1,1], [1.0])[1] == .5
