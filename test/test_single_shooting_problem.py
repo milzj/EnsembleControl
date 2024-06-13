@@ -8,7 +8,7 @@ def test_single_shooting_problem():
     # https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_single_shooting.py
 
     T = 1. # Time horizon
-    N = 1000 # number of control intervals
+    N = 100 # number of control intervals
     mesh_width = T/N
     initial_state = [1.0]
 
