@@ -76,3 +76,13 @@ def test_control_problem():
     assert double_integrator.final_time == 1.
     assert double_integrator.nparams == 1
     assert double_integrator.mesh_width == 0.01
+
+    x = double_integrator.x
+    u = double_integrator.u
+    xdot = double_integrator.xdot
+    L = self.L
+    f = Function('f', [x, u], [xdot, L])
+
+    assert f([1,1], [1.0])[1] == .5
+    assert f([1,1], [1.0])[0][0] == 1
+    assert f([1,1], [1.0])[0][1] == 1
