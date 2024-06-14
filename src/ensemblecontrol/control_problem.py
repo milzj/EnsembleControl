@@ -66,7 +66,7 @@ class ControlProblem(object):
         return NotImplementedError()
 
     @property
-    def right_hand_side(self):
+    def right_hand_side(self, x, u, params):
         return NotImplementedError()
 
     @property

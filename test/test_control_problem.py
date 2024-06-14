@@ -16,12 +16,16 @@ def test_control_problem():
     assert double_integrator.nparams == 1
     assert double_integrator.mesh_width == 0.01
 
-    x = double_integrator.x
-    u = double_integrator.u
-    xdot = double_integrator.xdot
-    L = double_integrator.L
-    f = Function('f', [x, u], [xdot, L])
+    f = double_integrator.right_hand_side
 
-    assert f([1,1], [1.0])[1] == .5
-    assert f([1,1], [1.0])[0][0] == 1
-    assert f([1,1], [1.0])[0][1] == 1
+    assert f([1,1], [1.0], [0])[0] == 1
+    assert f([1,1], [1.0], [0])[1] == 1
+
+    double_integrator.nintervals = 1000
+    assert double_integrator.mesh_width == 0.001
+
+    double_integrator.alpha = 0.005
+    assert double_integrator.alpha == 0.005
+
+    double_integrator.final_time = 2.
+    assert double_integrator.final_time == 2.

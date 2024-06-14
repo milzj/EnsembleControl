@@ -37,7 +37,7 @@ def SingleShootingProblem(objective_function,
         w   += [Uk]
         lbw += lbu
         ubw += ubu
-        w0  += u0
+        w0  += ncontrols*[0.0]
 
         # Integrate till the end of the interval
         Fk = dynamics(x0=Xk, p=Uk)

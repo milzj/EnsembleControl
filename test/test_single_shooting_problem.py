@@ -16,7 +16,6 @@ def test_single_shooting_problem():
     ubu = [1.]
     alpha = 1e-3
 
-
     # Declare model variables
     x = MX.sym('x')
     u = MX.sym('u')

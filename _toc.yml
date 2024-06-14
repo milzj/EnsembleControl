@@ -5,7 +5,7 @@ parts:
 
   - caption: Demos
     chapters:
-    - file: "demo/add_numbers"
+    - file: "demo/saa_harmonic_oscillator"
 
   - caption: API
     chapters:

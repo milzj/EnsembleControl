@@ -1,7 +1,7 @@
 from casadi import *
 
 
-def MultipleShootingProblem(objective_function,
+def MultipleShootingProblem(final_cost_function,
                             dynamics,
                             initial_state,
                             control_bounds,
@@ -42,7 +42,7 @@ def MultipleShootingProblem(objective_function,
         w   += [Uk]
         lbw += lbu
         ubw += ubu
-        w0  += u0
+        w0  += ncontrols*[.0]
 
         # Integrate till the end of the interval
         Fk = dynamics(x0=Xk, p=Uk)
@@ -64,7 +64,7 @@ def MultipleShootingProblem(objective_function,
     for i in range(nsamples):
       idx = np.arange(nstates // nsamples)+i*(nstates // nsamples)
       # TODO: Improve implementation of averaging
-      J += objective_function(Xk[idx])/nsamples
+      J += final_cost_function(Xk[idx])/nsamples
 
     objective = J
     constraints = vertcat(*g)
