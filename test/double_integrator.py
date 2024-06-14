@@ -1,6 +1,6 @@
+import ensemblecontrol
 from casadi import *
 import numpy as np
-import ensemblecontrol
 
 class DoubleIntegrator(ensemblecontrol.ControlProblem):
 
@@ -19,8 +19,8 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
         self.u = MX.sym("u")
         self.h = MX.sym("h")
         self.v = MX.sym("v")
+        self.params = MX.sym("p", 1)
         self.x = vertcat(self.h,self.v)
-        self.xdot = vertcat(self.v,self.u)
         self.L = (self.alpha/2)*dot(self.u, self.u)
         self._nominal_param = [0]
         self._param_initial_state = [1.0]
@@ -45,7 +45,15 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
 
     @property
     def right_hand_side(self):
-        return self.xdot
+
+        x = self.x
+        v = self.v
+        u = self.u
+        params = self.params
+        xdot = vertcat(v, u)
+        self.xdot = xdot
+
+        return Function('f', [x, u, params], [xdot])
 
     @property
     def integral_cost_function(self):
@@ -53,7 +61,7 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
 
     def parameterized_initial_state(self, params):
         # parameterized initial value
-        return 2*[1.0]
+        return [1.0, 1.0]
 
     def final_cost_function(self, x):
         # Objective function to be evaluated

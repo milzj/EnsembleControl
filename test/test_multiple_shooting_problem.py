@@ -16,7 +16,6 @@ def test_multiple_shooting_problem():
     ubu = [1.]
     alpha = 1e-3
 
-
     # Declare model variables
     x = MX.sym('x')
     u = MX.sym('u')
@@ -50,7 +49,6 @@ def test_multiple_shooting_problem():
                                                         dynamics, initial_state,
                                                         [lbu, ubu], 1, N)
 
-    obj = Function("objective", [decisions], [objective])
 
     lbw, ubw, lbg, ubg = bound_constraints
 
