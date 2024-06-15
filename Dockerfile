@@ -15,8 +15,8 @@ RUN pip3 install pip setuptools --upgrade
 WORKDIR /tmp/
 
 # We clone the package repo from github and install it and the binder dependencies
-RUN git clone https://github.com/jorgensd/reproducibility && \
-    pip install ./reproducibility[binder]
+RUN git clone https://github.com/milzj/EnsembleControl && \
+    pip install ./ensemblecontrol[binder]
 
 # We remove the contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp
