@@ -22,7 +22,7 @@ class DoubleIntegrator(ensemblecontrol.ControlProblem):
         self.params = MX.sym("p", 1)
         self.x = vertcat(self.h,self.v)
         self.L = (self.alpha/2)*dot(self.u, self.u)
-        self._nominal_param = [0]
+        self._nominal_param = [[0]]
         self._param_initial_state = [1.0]
 
     @property
