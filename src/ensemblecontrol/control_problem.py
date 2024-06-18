@@ -47,11 +47,11 @@ class ControlProblem(object):
 
     @property
     def nparams(self):
-        return len(self.nominal_param)
+        return len(self.nominal_param[0])
 
     @property
     def nstates(self):
-        return len(self.parameterized_initial_state(self.nparams[0]*[0]))
+        return len(self.parameterized_initial_state(self.nparams*[0]))
 
     @property
     def mesh_width(self):
