@@ -24,6 +24,7 @@ def SingleShootingProblem(objective_function,
 
     # Take average of lower and upper bound as initial control
     u0 = [(x+y)/2 for x,y in zip(lbu, ubu)]
+    u0 = list(np.nan_to_num(u0, posinf=0.0, neginf=0.0))
 
     nstates = len(initial_state)
     ncontrols = len(lbu)
@@ -37,7 +38,7 @@ def SingleShootingProblem(objective_function,
         w   += [Uk]
         lbw += lbu
         ubw += ubu
-        w0  += ncontrols*[0.0]
+        w0  += u0
 
         # Integrate till the end of the interval
         Fk = dynamics(x0=Xk, p=Uk)

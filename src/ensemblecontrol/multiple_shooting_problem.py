@@ -1,6 +1,5 @@
 from casadi import *
 
-
 def MultipleShootingProblem(final_cost_function,
                             dynamics,
                             initial_state,
@@ -24,6 +23,7 @@ def MultipleShootingProblem(final_cost_function,
 
     # Take average of lower and upper bound as initial control
     u0 = [(x+y)/2 for x,y in zip(lbu, ubu)]
+    u0 = list(np.nan_to_num(u0, posinf=0.0, neginf=0.0))
 
     nstates = len(initial_state)
     ncontrols = len(lbu)
@@ -35,6 +35,8 @@ def MultipleShootingProblem(final_cost_function,
     ubw += initial_state
     w0  += initial_state
 
+    xk = initial_state
+
     # Formulate the NLP
     for k in range(nintervals):
         # New NLP variable for the control
@@ -42,19 +44,22 @@ def MultipleShootingProblem(final_cost_function,
         w   += [Uk]
         lbw += lbu
         ubw += ubu
-        w0  += ncontrols*[.0]
+        w0  += u0
 
         # Integrate till the end of the interval
         Fk = dynamics(x0=Xk, p=Uk)
         Xk_end = Fk['xf']
         J += Fk['qf']
 
+        Fk = dynamics(x0=xk, p=u0)
+        xk = Fk['xf']
+
         # New NLP variable for state at end of interval
         Xk = MX.sym('X_' + str(k+1), nstates)
         w   += [Xk]
         lbw += nstates*[-inf]
         ubw += nstates*[inf]
-        w0  += nstates*[0.0]
+        w0  += list(np.array(xk))
 
         # Add equality constraint
         g   += [Xk_end-Xk]
