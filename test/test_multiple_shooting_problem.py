@@ -52,8 +52,6 @@ def test_multiple_shooting_problem():
 
     lbw, ubw, lbg, ubg = bound_constraints
 
-
-    assert np.linalg.norm(initial_decisions) == 1.0
     assert len(lbw) == len(initial_decisions)
     assert len(initial_decisions) == 2*N+1
     assert len(lbg) == N

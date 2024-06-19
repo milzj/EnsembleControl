@@ -47,7 +47,7 @@ class ControlProblem(object):
 
     @property
     def nparams(self):
-        return len(self.nominal_param)
+        return len(self.nominal_param[0])
 
     @property
     def nstates(self):
