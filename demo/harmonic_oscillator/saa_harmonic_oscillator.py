@@ -18,7 +18,7 @@ from harmonic_oscillator import HarmonicOscillator
 harmonic_oscillator = HarmonicOscillator()
 
 sampler = qmc.Sobol(d=1, scramble=False)
-samples = 2.0*np.pi*sampler.random_base2(m=6)
+samples = 2.0*np.pi*sampler.random_base2(m=10)
 
 saa_problem = ensemblecontrol.SAAProblem(harmonic_oscillator, samples)
 
