@@ -21,8 +21,7 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
         self.x = MX.sym("h", 2)
         self.params = MX.sym("k", 1)
         self.L = (self.alpha/2)*dot(self.u, self.u)
-        self._nominal_param = [0]
-        self._param_initial_state = [np.pi]
+        self._nominal_param = [[0]]
 
     @property
     def control_bounds(self):

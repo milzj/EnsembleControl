@@ -5,15 +5,9 @@ from scipy.stats import qmc
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-plt.rcParams.update({
-    'font.size': 8,
-    'text.usetex': True,
-    'text.latex.preamble': r'\usepackage{amsfonts}'
-})
 
-
+from idx_state_control import idx_state_control
 from harmonic_oscillator import HarmonicOscillator
-
 
 harmonic_oscillator = HarmonicOscillator()
 
@@ -24,25 +18,13 @@ saa_problem = ensemblecontrol.SAAProblem(harmonic_oscillator, samples)
 
 w_opt, f_opt = saa_problem.solve()
 
-
 # Prepare plotting
-
 mesh_width = harmonic_oscillator.mesh_width
 nintervals = harmonic_oscillator.nintervals
-nstates = 2
-ncontrols = 2
+nstates = harmonic_oscillator.nstates
+ncontrols = harmonic_oscillator.ncontrols
 alpha = harmonic_oscillator.alpha
 nsamples = len(samples)
-
-def idx_state_control(nstates, ncontrols, nsamples, nintervals):
-
-  idx = np.arange((nstates*nsamples+ncontrols)*(nintervals+1))
-  idx = idx.reshape((nstates*nsamples+ncontrols, nintervals+1), order='F')
-  idx_state = idx[0:nstates*nsamples, :]
-  idx_control = idx[nstates*nsamples:nstates*nsamples+ncontrols+1, 0:nintervals]
-
-  return idx_state, idx_control
-
 
 idx_state, idx_control = idx_state_control(nstates, ncontrols, nsamples, nintervals)
 
@@ -58,8 +40,6 @@ u2_opt = w_opt[idx_control[1::ncontrols]].flatten()
 tgrid = [mesh_width*k for k in range(nintervals+1)]
 
 # Controls
-
-
 plt.figure(1)
 plt.clf()
 plt.plot(tgrid, vertcat(DM.nan(1), u1_opt), '-.',color="tab:orange", label=r"$u_1^*(t)$")
@@ -78,7 +58,6 @@ plt.savefig("controls.pdf")
 
 
 # States
-
 plt.figure(1)
 plt.clf()
 plt.plot(tgrid, x1_opt, '--', label=r"$\mathbb{E}[x_1^*(t,\xi)]$", color="tab:blue")

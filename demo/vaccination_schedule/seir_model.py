@@ -57,7 +57,6 @@ class SEIRModel(ensemblecontrol.ControlProblem):
                         e*E-(g+a+d)*I,
                         g*I-d*R+u*S,
                         (b-d)*N-a*I,
-#                        -.1*N+(alpha/2)*u**2)
                         .1*I+(alpha/2)*u**2)
 
         self.xdot = xdot
