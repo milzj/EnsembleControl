@@ -4,19 +4,19 @@ import numpy as np
 
 class FedBatchReactor(ensemblecontrol.ControlProblem):
     # Based on https://doi.org/10.1109/9.173155
-    # and https://doi.org/10.1201/9780429123641
+    # and section 5 in https://doi.org/10.1201/9780429123641
     def __init__(self):
 
         super().__init__()
 
         self._alpha = 1.
         self._nintervals = 50
-        self._final_time = 15.
+        self._final_time = 20.
         self._ncontrols = 1
         self._nstates = 5
 
         #TODO: Increase upper bound to 2
-        self._control_bounds = [[0], [1]]
+        self._control_bounds = [[0], [2]]
 
         self.u = MX.sym("u", 1)
         self.x = MX.sym("h", 5)

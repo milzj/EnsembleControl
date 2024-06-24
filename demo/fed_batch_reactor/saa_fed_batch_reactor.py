@@ -81,10 +81,10 @@ if __name__ == "__main__":
     nominal_param = fed_batch_reactor.nominal_param[0]
 
     # sampler
-    sigma = 0.1
+    sigma = 0.01
 
     nparams = len(nominal_param)
-    m = 6
+    m = 10
     sampler = qmc.Sobol(d=nparams, scramble=False)
     samples = sampler.random_base2(m=m)
     samples = qmc.scale(samples, -1.0, 1.0)
