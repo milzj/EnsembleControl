@@ -6,17 +6,18 @@
 The package is designed to solve optimal control problems that take the form
 
 $$
-\min_{u \in U} \frac{1}{N} \sum_{i=1}^N F(x^u(1,\xi^i), \xi^i) + (\alpha/2)\|u\|_{L^2(0,t_f;\mathbb{R}^m)}^2,
+\min_{u \in U} \frac{1}{N} \sum_{i=1}^N F(x^u(t_f,\xi^i)) + (\alpha/2)\|u\|_{L^2(0,t_f;\mathbb{R}^m)}^2,
 $$
 
-where for each parameter $\xi \in \Xi$ and control $u(\cdot) \in L^2(0,t_f;\mathbb{R}^m)$, $x^u(\cdot, \xi) = x(\cdot, \xi)$ solves the uncertain dynamical system
+where $\alpha \geq 0$, and for each parameter $\xi \in \Xi$ and control $u(\cdot) \in L^2(0,t_f;\mathbb{R}^m)$, 
+the state $x^u(\cdot, \xi) = x(\cdot, \xi)$ solves the uncertain dynamical system
 
 $$
 \dot{x}(t, \xi)  = f(x(t,\xi), u(t), \xi), \quad t \in (0,t_f), \quad x(0,\xi) = x_0(\xi).
 $$
 
 Here $\xi^i \in \Xi \subset \mathbb{R}^p$ are parameters, $t_f > 0$ is the final time, and
-$f \colon \mathbb{R}^n  \times \mathbb{R}^m \times \Xi \to \mathbb{R}$ is the parameterized right-hand side.
+$f \colon \mathbb{R}^n  \times \mathbb{R}^m \times \Xi \to \mathbb{R}^n$ is the parameterized right-hand side.
 This parameterized initial value problem allows for uncertain right-hand sides and initial values.
 The set $U$ is a subset of $L^2(0,1;\mathbb{R}^m)$ such that 
 
@@ -25,6 +26,13 @@ a_j \leq u_j(t) \leq b_j, \quad j = 1, \ldots, m, \quad t \in (0,t_f).
 $$
 
 Here $a_j$ and $b_j$ are numbers in $[-\infty, \infty]$ for $j=1, \dots, m$.
+
+This ensemble control problem arises as a [sample average approximation](https://doi.org/10.1137/S1052623499363220)
+of the control problem
+
+$$
+\min_{u \in U} \frac{1}{N} \mathbb{E}[F(x^u(t_f,\xi))] + (\alpha/2)\|u\|_{L^2(0,t_f;\mathbb{R}^m)}^2,
+$$
 
 # Vaccination scheduling under model parameter uncertainty
 
@@ -38,8 +46,7 @@ $$
 \min_{u \in L^2(0, 20;\mathbb{R})} \mathbb{E}\Big[\int_{0}^{20} I^u(t,\xi) dt\Big]+(\alpha/2)\|u\|_{L^2(0,20;\mathbb{R})}^2,
 $$
 
-where for each  control $u(\cdot) \in L^2(0, t_f;\mathbb{R})$
-with $0 \leq u \leq 0.9$ and parameter 
+where for each feasible control $u(\cdot) \in L^2(0, 20;\mathbb{R})$ and parameter 
 $\xi = (a, b, c, d, e, g) \in \mathbb{R}_{>0}^6$,
 the states 
 $S^u(\cdot,\xi)$, $E^u(\cdot, \xi)$, $I^u(\cdot,\xi)$, $R^u(\cdot,\xi)$,
@@ -67,11 +74,15 @@ We use the initial states
 $S_0 = 1000$, 
 $E_0 = 100$,
 $I_0 = 50$,
+and
 $R_0 = 15$.
 We define $N_0 = S_0 + E_0 + I_0 + R_0$. 
-We choose the nominal parameter 
-$\bar \xi = (0.2, 0.525, 0.001, 0.5, 0.5, 0.1)$
-for $\xi = (a, b, c, d, e, g)$.
+For $\xi = (a, b, c, d, e, g)$, we choose the nominal parameter 
+
+$$
+\bar \xi = (0.2, 0.525, 0.001, 0.5, 0.5, 0.1).
+$$
+
 We construct the random variables $\xi_i$, $i = 1, \ldots, 6$ through 
 random relative
 perturbations of the nominal parameter $\bar \xi$. Specifically,
