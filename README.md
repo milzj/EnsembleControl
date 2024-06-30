@@ -78,10 +78,12 @@ perturbations of the nominal parameter $\bar \xi$. Specifically,
 for $\sigma = 0.1$ and independent random variables
 $\rho_i$, $i = 1, \ldots, 6$, uniformly distributed on 
 the interval $[-1,1]$, we define
+$$
 \begin{align*}
 	\xi_i = (1+\sigma \rho_i)\bar \xi_i,
 	\quad i = 1, \ldots, 6.
 \end{align*}
+$$
 
 The following figure depicts the nominal (left) and reference solutions
 (right).
