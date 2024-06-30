@@ -1,6 +1,6 @@
 # We choose ubuntu 22.04 as our base docker image
 
-FROM ubuntu:22.04
+FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
 
@@ -15,8 +15,9 @@ RUN pip3 install pip setuptools --upgrade
 WORKDIR /tmp/
 
 # We clone the package repo from github and install it and the binder dependencies
-RUN git clone https://github.com/jorgensd/reproducibility && \
-    pip install ./reproducibility[binder]
+RUN git clone https://github.com/milzj/EnsembleControl
+RUN cd EnsembleControl && \
+    pip install .[binder]
 
 # We remove the contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp
