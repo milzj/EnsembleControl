@@ -5,7 +5,7 @@ parts:
 
   - caption: Demos
     chapters:
-    - file: "demo/vaccination_schedule/seir_model"
+    - file: "demo/vaccination_schedule/seir_model.py"
 
   - caption: API
     chapters:
