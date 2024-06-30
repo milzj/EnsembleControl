@@ -5,7 +5,7 @@ parts:
 
   - caption: Demos
     chapters:
-    - file: "demo/saa_harmonic_oscillator"
+    - file: "demo/vaccination_schedule"
 
   - caption: API
     chapters:
