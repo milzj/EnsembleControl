@@ -38,7 +38,7 @@ $$
 
 We formulate a risk-neutral vaccination scheduling problem based on the control problem formulated in 
 
-> Miller Neilan, Rachael and Lenhart, Suzanne, Modeling paradigms and analysis of disease transmission models, [https://doi.org/10.1090/dimacs/075/03](https://doi.org/10.1090/dimacs/075/03).
+> Miller Neilan, Rachael and Lenhart, Suzanne, An introduction to optimal control with an application in disease modeling, [https://doi.org/10.1090/dimacs/075/03](https://doi.org/10.1090/dimacs/075/03).
 
 We consider the optimal control problem 
 
