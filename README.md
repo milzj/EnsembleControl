@@ -25,6 +25,66 @@ $$
 
 Here $a_j$ and $b_j$ are numbers in $[-\infty, \infty]$ for $j=1, \dots, m$.
 
+# Vaccination scheduling under model parameter uncertainty
+
+We formulate a risk-neutral vaccination scheduling problem based on the control problem formulated in Miller Neilan, Rachael and Lenhart, Suzanne, Modeling paradigms and analysis of disease transmission models, [https://doi.org/10.1090/dimacs/075/03](https://doi.org/10.1090/dimacs/075/03).
+
+We consider the optimal control problem 
+\begin{align}
+	\label{eq:vaccination}
+	\min_{u \in L^2(0, 20;\mathbb{R})}\, 
+	\mathbb{E}\Big[\int_{0}^{20} I^u(t,\xi) \mathrm{d} t\Big] + \psi(u),
+\end{align}
+where for each  control $u(\cdot) \in L^2(0, t_f;\mathbb{R})$
+with $0 \leq u \leq 0.9$ and parameter 
+$\xi \coloneqq (a, b, c, d, e, g) \in \mathbb{R}_{>0}^6$,
+the states 
+$S^u(\cdot,\xi)$, $E^u(\cdot, \xi)$, $I^u(\cdot,\xi)$, $R^u(\cdot,\xi)$,
+$N^u(\cdot, \xi)$ 
+solve the SEIR model 
+$$
+	S^{\prime}(t) & =b N(t)-d S(t)-c S(t) I(t)-u(t) S(t),
+	& S(0)  &= S_0, \\
+	E^{\prime}(t) & =c S(t) I(t)-(e+d) E(t),  &E(0)  &= E_0, \\
+	I^{\prime}(t) & =e E(t)-(g+a+d) I(t), & I(0)  &= I_0, \\
+	R^{\prime}(t) & =g I(t)-d R(t)+u(t) S(t), & R(0)  &= R_0,  \\
+	N^{\prime}(t) & =(b-d) N(t)-a I(t), & N(0)  &= N_0.  
+$$
+
+The control corresponds to a vaccination rate.
+
+We choose with $\alpha = 2$, $a_1 = 0$, and $b_1 = 0.9$
+
+We describe the parameter values and our
+choice of the random vector $\xi \in \mathbb{R}^6$
+used for our numerical simulation.
+We use the initial states
+$S_0 = 1000$, 
+$E_0 = 100$,
+$I_0 = 50$,
+$R_0 = 15$.
+We define $N_0 = S_0 + E_0 + I_0 + R_0$. 
+We choose the nominal parameter 
+$\bar \xi = (0.2, 0.525, 0.001, 0.5, 0.5, 0.1)$
+for $\xi = (a, b, c, d, e, g)$
+using the parameter values in \cite[Table 1]{MillerNeilan2010}.
+We construct the random variables $\xi_i$, $i = 1, \ldots, 6$ through 
+random relative
+perturbations of the nominal parameter $\bar \xi$. Specifically,
+for $\sigma = 0.1$ and independent random variables
+$\rho_i$, $i = 1, \ldots, 6$, uniformly distributed on 
+the interval $[-1,1]$, we define
+\begin{align*}
+	\xi_i = (1+\sigma \rho_i)\bar \xi_i,
+	\quad i = 1, \ldots, 6.
+\end{align*}
+
+The following figure depicts the nominal (left) and reference solutions
+(right).
+
+![](demo/vaccination_schedule/output/nominal_vaccination_rate.png)
+![](demo/vaccination_schedule/output/stochastic_vaccination_rate.png)
+
 # Documentation
 
 None.
