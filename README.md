@@ -1,6 +1,5 @@
 [![DOI](https://zenodo.org/badge/814172654.svg)](https://zenodo.org/doi/10.5281/zenodo.11669862)
-[![MIT License](https://img.shields.io/github/license/milzj/EnsembleControl/)](LICENSE)
-
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 # EnsembleControl
 
 The package is designed to solve optimal control problems that take the form
