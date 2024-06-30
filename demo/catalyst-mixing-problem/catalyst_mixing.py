@@ -2,26 +2,26 @@ import ensemblecontrol
 from casadi import *
 import numpy as np
 
-class HarmonicOscillator(ensemblecontrol.ControlProblem):
-    # Based on Problem S_C in https://doi.org/10.1137/140983161
+class CatalystMixing(ensemblecontrol.ControlProblem):
+    # Based on https://doi.org/10.1007/s10957-014-0641-4
 
     def __init__(self):
 
         super().__init__()
 
-        self._alpha = 1e-3
-        self._nintervals = 50
-        self._final_time = 1.
-        self._ncontrols = 2
+        self._alpha = 0.0
+        self._nintervals = 100
+        self._final_time = 12.
+        self._ncontrols = 1
         self._nstates = 2
 
-        self._control_bounds = [[-3., -3], [3., 3.]]
+        self._control_bounds = [[0.], [1.]]
 
-        self.u = MX.sym("u", 2)
+        self.u = MX.sym("u", 1)
         self.x = MX.sym("h", 2)
-        self.params = MX.sym("k", 1)
-        self.L = (self.alpha/2)*dot(self.u, self.u)
-        self._nominal_param = [[0]]
+        self.params = MX.sym("k", 3)
+        self.L = self._alpha/2*self.u**2
+        self._nominal_param = [[1., 10., 1.]]
 
     @property
     def control_bounds(self):
@@ -48,7 +48,7 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
         u = self.u
         k = self.params
 
-        xdot = vertcat(-k[0]*x[1]+u[0], k[0]*x[0]+u[1])
+        xdot = vertcat(-u*(k[0]*x[0]-k[1]*x[1]), u*(k[0]*x[0]-k[1]*x[1])-(1-u)*k[2]*x[1])
         self.xdot = xdot
 
         return Function('f', [x, u, k], [xdot])
@@ -65,5 +65,5 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
         # Objective function to be evaluated
         # at states at final time
         # Notation F in manuscript
-        return dot(x,x)/2
+        return x[0]+x[1]-1.0
 

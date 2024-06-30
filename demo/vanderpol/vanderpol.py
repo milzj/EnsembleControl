@@ -2,26 +2,25 @@ import ensemblecontrol
 from casadi import *
 import numpy as np
 
-class HarmonicOscillator(ensemblecontrol.ControlProblem):
-    # Based on Problem S_C in https://doi.org/10.1137/140983161
-
+class VanDerPol(ensemblecontrol.ControlProblem):
+    # 9.5.2.1 SIS Model with Treatment in 
     def __init__(self):
 
         super().__init__()
 
-        self._alpha = 1e-3
+        self._alpha = 1e-1
         self._nintervals = 50
-        self._final_time = 1.
-        self._ncontrols = 2
+        self._final_time = 8
+        self._ncontrols = 1
         self._nstates = 2
 
-        self._control_bounds = [[-3., -3], [3., 3.]]
+        self._control_bounds = [[-1], [1]]
 
-        self.u = MX.sym("u", 2)
+        self.u = MX.sym("u", 1)
         self.x = MX.sym("h", 2)
-        self.params = MX.sym("k", 1)
         self.L = (self.alpha/2)*dot(self.u, self.u)
-        self._nominal_param = [[0]]
+        self._nominal_param = [[1., 1.0, 1.0, 1.0, 1.0]] # beta, gamma, mu
+        self.params = MX.sym("k", 5)
 
     @property
     def control_bounds(self):
@@ -40,7 +39,11 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
     @property
     def state(self):
         return self.x
-
+        
+    @property
+    def nparams(self):
+        return 5
+        
     @property
     def right_hand_side(self):
 
@@ -48,7 +51,7 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
         u = self.u
         k = self.params
 
-        xdot = vertcat(-k[0]*x[1]+u[0], k[0]*x[0]+u[1])
+        xdot = vertcat(x[1], x[1]*k[1]*(k[0]-x[0]**2)-k[2]*x[0]+u)
         self.xdot = xdot
 
         return Function('f', [x, u, k], [xdot])
@@ -59,7 +62,7 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
 
     def parameterized_initial_state(self, params):
         # parameterized initial value
-        return [1.0, 0.0]
+        return [params[3], params[4]]
 
     def final_cost_function(self, x):
         # Objective function to be evaluated

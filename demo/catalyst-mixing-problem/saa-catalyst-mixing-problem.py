@@ -7,23 +7,28 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 from idx_state_control import idx_state_control
-from harmonic_oscillator import HarmonicOscillator
+from catalyst_mixing import CatalystMixing
 
-harmonic_oscillator = HarmonicOscillator()
+catalyst_mixing = CatalystMixing()
 
-sampler = qmc.Sobol(d=1, scramble=False)
-samples = 2.0*np.pi*sampler.random_base2(m=10)
+sigma = 0.99
+m = 6
+sampler = qmc.Sobol(d=3, scramble=False)
+samples = sampler.random_base2(m=m)
+samples = qmc.scale(samples, -1., 1.)
+samples = (1+sigma*samples)*catalyst_mixing.nominal_param[0]
 
-saa_problem = ensemblecontrol.SAAProblem(harmonic_oscillator, samples)
+
+saa_problem = ensemblecontrol.SAAProblem(catalyst_mixing, samples)
 
 w_opt, f_opt = saa_problem.solve()
 
 # Prepare plotting
-mesh_width = harmonic_oscillator.mesh_width
-nintervals = harmonic_oscillator.nintervals
-nstates = harmonic_oscillator.nstates
-ncontrols = harmonic_oscillator.ncontrols
-alpha = harmonic_oscillator.alpha
+mesh_width = catalyst_mixing.mesh_width
+nintervals = catalyst_mixing.nintervals
+nstates = catalyst_mixing.nstates
+ncontrols = catalyst_mixing.ncontrols
+alpha = catalyst_mixing.alpha
 nsamples = len(samples)
 
 idx_state, idx_control = idx_state_control(nstates, ncontrols, nsamples, nintervals)
@@ -35,15 +40,13 @@ x2_opt = np.mean(w_opt[idx_state[1::nstates]], axis=0)
 x2_opt_std = np.std(w_opt[idx_state[1::nstates]], axis=0)
 
 u1_opt = w_opt[idx_control[0::ncontrols]].flatten()
-u2_opt = w_opt[idx_control[1::ncontrols]].flatten()
 
 tgrid = [mesh_width*k for k in range(nintervals+1)]
 
 # Controls
 plt.figure(1)
 plt.clf()
-plt.plot(tgrid, vertcat(DM.nan(1), u1_opt), '-.',color="tab:orange", label=r"$u_1^*(t)$")
-plt.plot(tgrid, vertcat(DM.nan(1), u2_opt), '--',color="tab:blue", label=r"$u_2^*(t)$")
+plt.step(tgrid, vertcat(DM.nan(1), u1_opt), '-.',color="tab:orange", label=r"$u_1^*(t)$")
 
 handles, labels = plt.gca().get_legend_handles_labels() # get existing handles and labels
 empty_patch = mpatches.Patch(color='none') # create a patch with no color

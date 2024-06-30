@@ -2,8 +2,7 @@ import ensemblecontrol
 from casadi import *
 import numpy as np
 
-class HarmonicOscillator(ensemblecontrol.ControlProblem):
-    # Based on Problem S_C in https://doi.org/10.1137/140983161
+class CubicOscillator(ensemblecontrol.ControlProblem):
 
     def __init__(self):
 
@@ -19,9 +18,9 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
 
         self.u = MX.sym("u", 2)
         self.x = MX.sym("h", 2)
-        self.params = MX.sym("k", 1)
+        self.params = MX.sym("k", 4)
         self.L = (self.alpha/2)*dot(self.u, self.u)
-        self._nominal_param = [[0]]
+        self._nominal_param = [4*[np.pi]]
 
     @property
     def control_bounds(self):
@@ -42,13 +41,16 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
         return self.x
 
     @property
+    def nparams(self):
+        return 4
+
+    @property
     def right_hand_side(self):
 
         x = self.x
         u = self.u
         k = self.params
-
-        xdot = vertcat(-k[0]*x[1]+u[0], k[0]*x[0]+u[1])
+        xdot = vertcat(-k[0]*x[1]+((k[1]-np.pi)/np.pi-x[0]**2-x[1]**2)*x[0]+u[0], k[0]*x[0]+((k[2]-np.pi)/np.pi-x[0]**2-x[1]**2)*x[1]+(k[3]-np.pi)/np.pi+u[1])
         self.xdot = xdot
 
         return Function('f', [x, u, k], [xdot])
@@ -58,8 +60,8 @@ class HarmonicOscillator(ensemblecontrol.ControlProblem):
         return self.L
 
     def parameterized_initial_state(self, params):
-        # parameterized initial value
-        return [1.0, 0.0]
+        # parameterized initial values
+        return [1, 0]
 
     def final_cost_function(self, x):
         # Objective function to be evaluated
