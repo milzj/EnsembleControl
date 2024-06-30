@@ -27,7 +27,9 @@ Here $a_j$ and $b_j$ are numbers in $[-\infty, \infty]$ for $j=1, \dots, m$.
 
 # Vaccination scheduling under model parameter uncertainty
 
-We formulate a risk-neutral vaccination scheduling problem based on the control problem formulated in Miller Neilan, Rachael and Lenhart, Suzanne, Modeling paradigms and analysis of disease transmission models, [https://doi.org/10.1090/dimacs/075/03](https://doi.org/10.1090/dimacs/075/03).
+We formulate a risk-neutral vaccination scheduling problem based on the control problem formulated in 
+
+> Miller Neilan, Rachael and Lenhart, Suzanne, Modeling paradigms and analysis of disease transmission models, [https://doi.org/10.1090/dimacs/075/03](https://doi.org/10.1090/dimacs/075/03).
 
 We consider the optimal control problem 
 
@@ -55,7 +57,7 @@ $$
 
 The control $u$ corresponds to a vaccination rate.
 
-We choose with $\alpha = 2$, $a_1 = 0$, and $b_1 = 0.9$
+We choose with $\alpha = 2$, $a_1 = 0$, and $b_1 = 0.9$.
 
 We describe the parameter values and our
 choice of the random vector $\xi \in \mathbb{R}^6$
@@ -68,8 +70,7 @@ $R_0 = 15$.
 We define $N_0 = S_0 + E_0 + I_0 + R_0$. 
 We choose the nominal parameter 
 $\bar \xi = (0.2, 0.525, 0.001, 0.5, 0.5, 0.1)$
-for $\xi = (a, b, c, d, e, g)$
-using the parameter values in \cite[Table 1]{MillerNeilan2010}.
+for $\xi = (a, b, c, d, e, g)$.
 We construct the random variables $\xi_i$, $i = 1, \ldots, 6$ through 
 random relative
 perturbations of the nominal parameter $\bar \xi$. Specifically,
