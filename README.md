@@ -43,23 +43,14 @@ $S^u(\cdot,\xi)$, $E^u(\cdot, \xi)$, $I^u(\cdot,\xi)$, $R^u(\cdot,\xi)$,
 $N^u(\cdot, \xi)$ 
 solve the SEIR model 
 
-$$
-S^{\prime}(t) & =b N(t)-d S(t)-c S(t) I(t)-u(t) S(t),  \\
-E^{\prime}(t) & =c S(t) I(t)-(e+d) E(t),  \\
-I^{\prime}(t) & =e E(t)-(g+a+d) I(t),  \\
-R^{\prime}(t) & =g I(t)-d R(t)+u(t) S(t),   \\
-N^{\prime}(t) & =(b-d) N(t)-a I(t),
-$$
-
-with initial conditions
-
-$$
-S^{\prime}(t) & =b N(t)-d S(t)-c S(t) I(t)-u(t) S(t), & S(0)  &= S_0, \\
-E^{\prime}(t) & =c S(t) I(t)-(e+d) E(t),  &E(0)  &= E_0, \\
-I^{\prime}(t) & =e E(t)-(g+a+d) I(t), & I(0)  &= I_0, \\
-R^{\prime}(t) & =g I(t)-d R(t)+u(t) S(t), \quad R(0)  = R_0,  \\
-N^{\prime}(t) & =(b-d) N(t)-a I(t), \quad N(0)  &= N_0.  
-$$
+\begin{align*}
+	S^{\prime}(t) & =b N(t)-d S(t)-c S(t) I(t)-u(t) S(t),
+	& S(0)  &= S_0, \\
+	E^{\prime}(t) & =c S(t) I(t)-(e+d) E(t),  &E(0)  &= E_0, \\
+	I^{\prime}(t) & =e E(t)-(g+a+d) I(t), & I(0)  &= I_0, \\
+	R^{\prime}(t) & =g I(t)-d R(t)+u(t) S(t), & R(0)  &= R_0,  \\
+	N^{\prime}(t) & =(b-d) N(t)-a I(t), & N(0)  &= N_0.  
+\end{align*}
 
 The control corresponds to a vaccination rate.
 
