@@ -29,6 +29,10 @@ Here $a_j$ and $b_j$ are numbers in $[-\infty, \infty]$ for $j=1, \dots, m$.
 
 None.
 
+The control problem is discretized using a multiple shooting approach
+following [Direct multiple shooting](https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_multiple_shooting.py).
+An explicit 4th order Runge--Kutta method is used to discretize the dynamical system.
+
 # Installation
 
 ```
