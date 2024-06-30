@@ -1,11 +1,10 @@
 # Book settings
 # Learn more at https://jupyterbook.org/customize/config.html
 
-title: MyPackage - The reproducible template for Simula Research Laboratory
-author: Jørgen S. Dokken
-logo: "docs/logo.png"
-copyright: "2022"
-only_build_toc_files : true
+title: EnsembleControl
+author: Johannes Milz
+copyright: "2024"
+only_build_toc_files : false
 
 # Force re-execution of notebooks on each build.
 # See https://jupyterbook.org/content/execute.html
