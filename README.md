@@ -136,6 +136,12 @@ or
 docker build -t ensemblecontrol . --no-cache --network=host
 ```
 
+Alternatively, download
+
+```
+docker pull ghcr.io/milzj/ensemblecontrol:latest
+```
+
 Run the docker container using
 
 ```
