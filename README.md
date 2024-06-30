@@ -31,9 +31,9 @@ We formulate a risk-neutral vaccination scheduling problem based on the control 
 
 We consider the optimal control problem 
 $$
-	\min_{u \in L^2(0, 20;\mathbb{R})}\, 
-	\mathbb{E}\Big[\int_{0}^{20} I^u(t,\xi) \mathrm{d} t\Big]  (\alpha/2)\|u\|_{L^2(0,20;\mathbb{R})}^2,
+\min_{u \in L^2(0, 20;\mathbb{R})}\, \mathbb{E}\Big[\int_{0}^{20} I^u(t,\xi) \mathrm{d} t\Big]  (\alpha/2)\|u\|_{L^2(0,20;\mathbb{R})}^2,
 $$
+
 where for each  control $u(\cdot) \in L^2(0, t_f;\mathbb{R})$
 with $0 \leq u \leq 0.9$ and parameter 
 $\xi \coloneqq (a, b, c, d, e, g) \in \mathbb{R}_{>0}^6$,
@@ -41,13 +41,13 @@ the states
 $S^u(\cdot,\xi)$, $E^u(\cdot, \xi)$, $I^u(\cdot,\xi)$, $R^u(\cdot,\xi)$,
 $N^u(\cdot, \xi)$ 
 solve the SEIR model 
+
 \begin{align}
-	S^{\prime}(t) & =b N(t)-d S(t)-c S(t) I(t)-u(t) S(t),
-	& S(0)  &= S_0, \\
-	E^{\prime}(t) & =c S(t) I(t)-(e+d) E(t),  &E(0)  &= E_0, \\
-	I^{\prime}(t) & =e E(t)-(g+a+d) I(t), & I(0)  &= I_0, \\
-	R^{\prime}(t) & =g I(t)-d R(t)+u(t) S(t), & R(0)  &= R_0,  \\
-	N^{\prime}(t) & =(b-d) N(t)-a I(t), & N(0)  &= N_0.  
+S^{\prime}(t) & =b N(t)-d S(t)-c S(t) I(t)-u(t) S(t), & S(0)  &= S_0, \\
+E^{\prime}(t) & =c S(t) I(t)-(e+d) E(t),  &E(0)  &= E_0, \\
+I^{\prime}(t) & =e E(t)-(g+a+d) I(t), & I(0)  &= I_0, \\
+R^{\prime}(t) & =g I(t)-d R(t)+u(t) S(t), & R(0)  &= R_0,  \\
+N^{\prime}(t) & =(b-d) N(t)-a I(t), & N(0)  &= N_0.  
 \end{align}
 
 The control corresponds to a vaccination rate.
