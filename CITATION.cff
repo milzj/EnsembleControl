@@ -5,7 +5,6 @@ authors:
   given-names: "Johannes"
   orcid: "https://orcid.org/0000-0003-3601-3340"
 title: "EnsembleControl"
-version: 0.0.1
-doi: 
+doi: 10.5281/zenodo.11669862
 date-released: 
 url: "https://github.com/milzj/EnsembleControl"
