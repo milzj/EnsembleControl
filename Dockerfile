@@ -19,6 +19,7 @@ RUN git clone https://github.com/milzj/EnsembleControl
 RUN cd EnsembleControl && \
     pip install .[binder]
 
+
 # We remove the contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp
 

@@ -11,7 +11,6 @@ def test_canonical_criticality_measure():
     grad_vec = np.random.randn(n)
     u_vec = np.zeros(n)
 
-
     idx = grad_vec > 0.0
     u_vec[idx] = -1.0
 
