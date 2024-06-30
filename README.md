@@ -31,7 +31,7 @@ This ensemble control problem arises as a [sample average approximation](https:/
 of the control problem
 
 $$
-\min_{u \in U} \frac{1}{N} \mathbb{E}[F(x^u(t_f,\xi))] + (\alpha/2)\|u\|_{L^2(0,t_f;\mathbb{R}^m)}^2,
+\min_{u \in U} \mathbb{E}[F(x^u(t_f,\xi))] + (\alpha/2)\|u\|_{L^2(0,t_f;\mathbb{R}^m)}^2,
 $$
 
 # Vaccination scheduling under model parameter uncertainty
