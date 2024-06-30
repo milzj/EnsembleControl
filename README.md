@@ -30,8 +30,9 @@ Here $a_j$ and $b_j$ are numbers in $[-\infty, \infty]$ for $j=1, \dots, m$.
 We formulate a risk-neutral vaccination scheduling problem based on the control problem formulated in Miller Neilan, Rachael and Lenhart, Suzanne, Modeling paradigms and analysis of disease transmission models, [https://doi.org/10.1090/dimacs/075/03](https://doi.org/10.1090/dimacs/075/03).
 
 We consider the optimal control problem 
+
 $$
-\min_{u \in L^2(0, 20;\mathbb{R})}\, \mathbb{E}[\int_{0}^{20} I^u(t,\xi) dt]  (\alpha/2)\|u\|_{L^2(0,20;\mathbb{R})}^2,
+\min_{u \in L^2(0, 20;\mathbb{R})}\, \mathbb{E}[\int_{0}^{20} I^u(t,\xi) dt]+(\alpha/2)\|u\|_{L^2(0,20;\mathbb{R})}^2,
 $$
 
 where for each  control $u(\cdot) \in L^2(0, t_f;\mathbb{R})$
