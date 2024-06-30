@@ -85,8 +85,8 @@ $$
 \end{align*}
 $$
 
-The following figure depicts the nominal (left) and reference solutions
-(right).
+The following figure depicts the nominal (left/top) and reference solutions
+(right/bottom).
 
 ![](demo/vaccination_schedule/output/nominal_vaccination_rate.png)
 ![](demo/vaccination_schedule/output/stochastic_vaccination_rate.png)
