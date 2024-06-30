@@ -88,7 +88,7 @@ if __name__ == "__main__":
     sigma = 0.99
 
     nparams = len(nominal_param)
-    m = 4
+    m = 10
     sampler = qmc.Sobol(d=nparams, scramble=False)
     samples = sampler.random_base2(m=m)
     samples = qmc.scale(samples, -1.0, 1.0)
