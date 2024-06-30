@@ -31,12 +31,12 @@ We formulate a risk-neutral vaccination scheduling problem based on the control 
 
 We consider the optimal control problem 
 $$
-\min_{u \in L^2(0, 20;\mathbb{R})}\, \mathbb{E}[\int_{0}^{20} I^u(t,\xi) \text{d}t]  (\alpha/2)\|u\|_{L^2(0,20;\mathbb{R})}^2,
+\min_{u \in L^2(0, 20;\mathbb{R})}\, \mathbb{E}[\int_{0}^{20} I^u(t,\xi) dt]  (\alpha/2)\|u\|_{L^2(0,20;\mathbb{R})}^2,
 $$
 
 where for each  control $u(\cdot) \in L^2(0, t_f;\mathbb{R})$
 with $0 \leq u \leq 0.9$ and parameter 
-$\xi \coloneqq (a, b, c, d, e, g) \in \mathbb{R}_{>0}^6$,
+$\xi = (a, b, c, d, e, g) \in \mathbb{R}_{>0}^6$,
 the states 
 $S^u(\cdot,\xi)$, $E^u(\cdot, \xi)$, $I^u(\cdot,\xi)$, $R^u(\cdot,\xi)$,
 $N^u(\cdot, \xi)$ 
