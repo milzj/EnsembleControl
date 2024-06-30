@@ -5,7 +5,7 @@
 The package is designed to solve optimal control problems that take the form
 
 $$
-\min_{u \in U} \frac{1}{N} \sum_{i=1}^N F(x^u(1,\xi^i), \xi^i) + (\alpha/2)\|\|_{L^2(0,1;\mathbb{R}^m)}^2,
+\min_{u \in U} \frac{1}{N} \sum_{i=1}^N F(x^u(1,\xi^i), \xi^i) + (\alpha/2)\|u\|_{L^2(0,1;\mathbb{R}^m)}^2,
 $$
 
 where for each parameter $\xi \in \Xi$ and control $u(\cdot) \in L^2(0,1;\mathbb{R}^m)$, $x^u(\cdot, \xi) = x(\cdot, \xi)$ solves the uncertain dynamical system
