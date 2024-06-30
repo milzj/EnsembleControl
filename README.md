@@ -98,6 +98,8 @@ An explicit 4th order Runge--Kutta method is used to discretize the dynamical sy
 
 # Installation
 
+The package can be installed via the command
+
 ```
 pip install git+https://github.com/milzj/EnsembleControl
 ```
@@ -105,7 +107,6 @@ pip install git+https://github.com/milzj/EnsembleControl
 # Demo
 
 See [here](/demo).
-
 
 # Docker
 
