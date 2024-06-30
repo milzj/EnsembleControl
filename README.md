@@ -23,7 +23,7 @@ $$
 a_j \leq u_j(t) \leq b_j, \quad j = 1, \ldots, m, \quad t \in (0,1).
 $$
 
-Here $a_j$ and $b_j$ are numbers in $[-\infty, infty]$ for $j=1, \dots, m$.
+Here $a_j$ and $b_j$ are numbers in $[-\infty, \infty]$ for $j=1, \dots, m$.
 
 # Documentation
 
