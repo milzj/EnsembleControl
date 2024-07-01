@@ -34,7 +34,7 @@ $$
 \min_{u \in U} \mathbb{E}[F(x^u(t_f,\xi))] + (\alpha/2)\|u\|_{L^2(0,t_f;\mathbb{R}^m)}^2.
 $$
 
-# Vaccination scheduling under model parameter uncertainty
+## Vaccination scheduling under model parameter uncertainty
 
 We formulate a risk-neutral vaccination scheduling problem based on the control problem formulated in 
 
@@ -102,7 +102,7 @@ The following figure depicts the nominal (left/top) and reference solutions
 ![](demo/vaccination_schedule/output/nominal_vaccination_rate.png)
 ![](demo/vaccination_schedule/output/stochastic_vaccination_rate.png)
 
-# Documentation
+## Documentation
 
 None.
 
@@ -110,7 +110,7 @@ The control problem is discretized using a multiple shooting approach
 following [Direct multiple shooting](https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_multiple_shooting.py).
 An explicit 4th order Runge--Kutta method is used to discretize the dynamical system.
 
-# Installation
+## Installation
 
 The package can be installed via the command
 
@@ -118,11 +118,11 @@ The package can be installed via the command
 pip install git+https://github.com/milzj/EnsembleControl
 ```
 
-# Demo
+## Demo
 
 See [here](/demo).
 
-# Docker
+## Docker
 
 Create a local docker container via
 
@@ -148,11 +148,11 @@ Run the docker container using
 docker run -it ensemblecontrol sh
 ```
 
-# Contributing
+## Contributing
 
 Information about how to contribute can be found
 [here](CONTRIBUTING.md).
 
-# Licence
+## Licence
 
 See [here](LICENSE).
