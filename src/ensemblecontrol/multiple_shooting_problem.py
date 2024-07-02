@@ -59,7 +59,7 @@ def MultipleShootingProblem(final_cost_function,
         w   += [Xk]
         lbw += nstates*[-inf]
         ubw += nstates*[inf]
-        w0 += list(xk.full()[:, 0])
+        w0 += list(xk.full().flatten())
 
         # Add equality constraint
         g   += [Xk_end-Xk]

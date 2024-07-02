@@ -109,5 +109,5 @@ class SAAProblem(object):
         sol = solver(x0=x0, lbx=lbx, ubx=ubx, lbg=lbg, ubg=ubg)
         w_opt = sol['x'].full().flatten()
 
-        return w_opt, sol['f']
+        return w_opt, sol['f'].full().flatten()
 
