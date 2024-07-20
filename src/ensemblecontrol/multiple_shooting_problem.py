@@ -5,7 +5,8 @@ def MultipleShootingProblem(final_cost_function,
                             initial_state,
                             control_bounds,
                             nsamples,
-                            nintervals):
+                            nintervals,
+                            beta=0.0):
 
     # Start with an empty NLP
     # Adapted from https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_multiple_shooting.py
@@ -66,11 +67,31 @@ def MultipleShootingProblem(final_cost_function,
         lbg += nstates*[0.0]
         ubg += nstates*[0.0]
 
+    if beta > 0 and beta < 1.0:
+        t = MX.sym('t', 1)
+        w += [t]
+        lbw += [-inf]
+        ubw += [inf]
+        w0 += [0.0]
+      
     for i in range(nsamples):
       idx = np.arange(nstates // nsamples)+i*(nstates // nsamples)
       # TODO: Improve implementation of averaging
-      J += final_cost_function(Xk[idx])/nsamples
-
+      if beta == 0.0:
+        J += final_cost_function(Xk[idx])/nsamples
+      elif beta > 0 and beta < 1.0:
+        # https://doi.org/10.1061/AJRUA6.0000816
+        r = MX.sym('t_' + str(i), 1)
+        w += [r]
+        lbw += [0.0]
+        ubw += [inf]
+        w0 += [0.0]
+        J += t + (1/(1-beta)/nsamples)*r
+        j = final_cost_function(Xk[idx])
+        g   += [j-t-r]
+        lbg += [-inf]
+        ubg += [0.0]
+        
     objective = J
     constraints = vertcat(*g)
     decisions = vertcat(*w)
