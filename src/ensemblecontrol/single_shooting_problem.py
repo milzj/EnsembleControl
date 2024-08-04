@@ -1,5 +1,5 @@
 from casadi import *
-
+from .risk_measures import *
 
 def SingleShootingProblem(objective_function,
                             dynamics,
@@ -31,6 +31,7 @@ def SingleShootingProblem(objective_function,
     ncontrols = len(lbu)
 
     Xk  = MX(initial_state)
+    xk = initial_state
 
     # Formulate the NLP
     for k in range(nintervals):
@@ -46,10 +47,10 @@ def SingleShootingProblem(objective_function,
         Xk = Fk['xf']
         J += Fk['qf']
 
-    for i in range(nsamples):
-      idx = np.arange(nstates // nsamples)+i*(nstates // nsamples)
-      # TODO: Improve implementation of averaging
-      J += objective_function(Xk[idx])/nsamples
+        Fk = dynamics(x0=xk, p=u0)
+        xk = Fk['xf']
+    xk = xk.full().flatten()
+    J, w, lbw, ubw, g, lbg, ubg = risk_measure(J, w, w0, lbw, ubw, g, lbg, ubg, objective_function, Xk, xk, beta, nstates, nsamples)
 
     objective = J
     constraints = vertcat(*g)
