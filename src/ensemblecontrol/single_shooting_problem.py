@@ -6,7 +6,8 @@ def SingleShootingProblem(objective_function,
                             initial_state,
                             control_bounds,
                             nsamples,
-                            nintervals):
+                            nintervals,
+                            beta=0):
 
     # Start with an empty NLP
     # Adapted from https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_multiple_shooting.py

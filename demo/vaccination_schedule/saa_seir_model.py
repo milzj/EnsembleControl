@@ -13,9 +13,9 @@ from idx_state_control import idx_state_control
 outdir = "output"
 os.makedirs(outdir, exist_ok=True)
 
-def solve(seir_model, samples):
+def solve(seir_model, samples, beta=0.0):
 
-    saa_problem = ensemblecontrol.SAAProblem(seir_model, samples, MultipleShooting=True)
+    saa_problem = ensemblecontrol.SAAProblem(seir_model, samples, beta=beta, MultipleShooting=True)
     w_opt, f_opt = saa_problem.solve()
 
     return w_opt
@@ -69,10 +69,11 @@ def plot(seir_model, w_opt, samples, prefix):
 
 if __name__ == "__main__":
 
+    beta = 0.9
     # Nominal problem
     seir_model = SEIRModel()
     nominal_param = seir_model.nominal_param
-    w_opt = solve(seir_model, nominal_param)
+    w_opt = solve(seir_model, nominal_param, beta=beta)
     plot(seir_model, w_opt, nominal_param, "nominal")
 
 
@@ -81,16 +82,16 @@ if __name__ == "__main__":
     nominal_param = seir_model.nominal_param[0]
 
     # sampler
-    sigma = 0.1
+    sigma = 0.05
 
     nparams = len(nominal_param)
-    m = 10
+    m = 5
     sampler = qmc.Sobol(d=nparams, scramble=False)
     samples = sampler.random_base2(m=m)
     samples = qmc.scale(samples, -1.0, 1.0)
     samples = (1+sigma*samples)*nominal_param
 
-    w_opt = solve(seir_model, samples)
+    w_opt = solve(seir_model, samples, beta=beta)
     plot(seir_model, w_opt, samples, "stochastic")
 
 

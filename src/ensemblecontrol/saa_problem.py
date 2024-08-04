@@ -8,11 +8,12 @@ from .single_shooting_problem import SingleShootingProblem
 
 class SAAProblem(object):
 
-    def __init__(self, control_problem, samples, MultipleShooting=True):
+    def __init__(self, control_problem, samples, beta=0.0, MultipleShooting=True):
 
         self.control_problem = control_problem
         self.samples = samples
         self.nsamples = len(samples)
+        self.beta = beta
 
         self.MultipleShooting = MultipleShooting
 
@@ -63,6 +64,8 @@ class SAAProblem(object):
         ensemble_initial_state = self.ensemble_initial_state
         nsamples = self.nsamples
 
+        beta = self.beta 
+
         if self.MultipleShooting == True:
 
             Problem = MultipleShootingProblem
@@ -77,7 +80,8 @@ class SAAProblem(object):
                                             ensemble_initial_state,
                                             control_bounds,
                                             nsamples,
-                                            nintervals)
+                                            nintervals,
+                                            beta=beta)
 
         self.objective = objective
         self.decisions = decisions
