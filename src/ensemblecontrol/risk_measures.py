@@ -25,7 +25,7 @@ def risk_measure(J, w, w0, lbw, ubw, g, lbg, ubg, final_cost_function, Xk, xk, b
             w += [r]
             lbw += [0.0]
             ubw += [inf]
-            w0 += [max(j0-t0,0.0)+1.0]
+            w0 += [max(float(j0)-t0,0.0)+1.0]
             J += (1/(1-beta)/nsamples)*r
             g   += [j-t-r]
             lbg += [-inf]

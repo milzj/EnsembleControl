@@ -4,4 +4,6 @@ from .single_shooting_problem import SingleShootingProblem
 from .multiple_shooting_problem import MultipleShootingProblem
 from .control_problem import ControlProblem
 from .saa_problem import SAAProblem
+from .idx_state_control import idx_state_control
+from .plotting import SolutionPlotter
 from . import base
