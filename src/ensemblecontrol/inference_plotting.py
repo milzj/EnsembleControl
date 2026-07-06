@@ -261,24 +261,24 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
     else:
         cis = [plugin_ci_from_losses(r["F"], r["f_opt"], levels) for r in results]
 
-    # N_out: out-of-sample size M (only present for the out-of-sample variant);
+    # M: out-of-sample size (only present for the out-of-sample variant);
     # listed in every legend alongside q. A fixed M prints the number; M matched
     # to the training size prints "N"; otherwise a range.
     Ms = [ci.get("M") for ci in cis]
     if not cis or all(m is None for m in Ms):
-        n_out_label = None
+        m_label = None
     elif all(m == ci["N"] for m, ci in zip(Ms, cis)):
-        n_out_label = "N"
+        m_label = "N"
     elif len(set(Ms)) == 1:
-        n_out_label = str(Ms[0])
+        m_label = str(Ms[0])
     else:
-        n_out_label = "{}-{}".format(min(Ms), max(Ms))
+        m_label = "{}-{}".format(min(Ms), max(Ms))
 
     def _params(base):
         h = _append_q(list(base), q)
-        if n_out_label is not None:
+        if m_label is not None:
             h.append(mpatches.Patch(
-                color="none", label=r"$N_{\mathrm{out}} = %s$" % n_out_label))
+                color="none", label=r"$M = %s$" % m_label))
         return h
 
     legend_handles = _params(_hist_legend_handles(hist_bands, loss_label))
