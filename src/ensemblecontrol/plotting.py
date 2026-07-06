@@ -79,7 +79,6 @@ class SolutionPlotter(object):
 
         nstates = self.nstates
         ncontrols = self.ncontrols
-        nsamples = self.nsamples
         nintervals = self.nintervals
 
         # Controls are stored contiguously at the front of w_opt; any CVaR
@@ -88,14 +87,9 @@ class SolutionPlotter(object):
         self.controls = u.T
 
         # Reconstruct the ensemble state trajectory by rolling the controls
-        # forward through the ensemble dynamics from the initial state.
-        dynamics = self.saa_problem.dynamics
-        X = np.array(self.saa_problem.ensemble_initial_state, dtype=float)
-        ensemble = np.empty((nstates*nsamples, nintervals+1))
-        ensemble[:, 0] = X
-        for k in range(nintervals):
-            X = np.array(dynamics(x0=X, p=u[k])['xf']).flatten()
-            ensemble[:, k+1] = X
+        # forward through the per-sample dynamics from the initial state (the
+        # states are not decision variables in single shooting).
+        ensemble = self.saa_problem.ensemble_state_trajectory(u)
 
         self.state_mean = np.empty((nstates, nintervals+1))
         self.state_std = np.empty((nstates, nintervals+1))
