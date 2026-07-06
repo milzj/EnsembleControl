@@ -1,0 +1,13 @@
+Statistical limit theorem illustration
+statistic = sqrt(N) * (J_hat_N* - J_hat_ref*)
+N_ref = 1024
+J_hat_ref* =  8.54453831e-03
+
+N = 32  (R = 200 replicates)
+  mean = -1.927926e-03   std =  2.786390e-03
+
+N = 64  (R = 200 replicates)
+  mean = -1.552548e-03   std =  2.900305e-03
+
+N = 128  (R = 200 replicates)
+  mean = -5.025238e-04   std =  2.841937e-03
