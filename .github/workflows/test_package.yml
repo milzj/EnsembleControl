@@ -11,6 +11,9 @@ on:
   # This workflow can be executed inside another workfow file
   workflow_call:
 
+  # Allows triggering the workflow manually from the Actions tab
+  workflow_dispatch:
+
   schedule:
     # The CI is executed every day at 8am
     - cron: "0 8 * * *"
