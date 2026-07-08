@@ -99,20 +99,20 @@ fast decomposition). Writing the per-scenario loss $F_i = -x_2(t_f, \xi_i)$, the
 empirical CVaR of the loss $F$ has the Rockafellar–Uryasev variational form
 
 $$
-\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}\max\\{0,F_i - t\\} \},
+\mathrm{CVaR}_\beta(F) = \min_{\tau \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}\max\\{0,F_i - \tau\\} \},
 $$
 
-where $t$ is the Value-at-Risk
-level. Introducing one slack $s_i$ per scenario to lift each $\max\\{0,F_i - t\\}$ turns the
+where $\tau$ is the Value-at-Risk
+level. Introducing one slack $s_i$ per scenario to lift each $\max\\{0,F_i - \tau\\}$ turns the
 SAA into a smooth joint minimization over the control $u$, the threshold $t$, and
 the slacks $s$ — a deterministic multi-scenario optimal control problem
 (implemented in [`risk_measures.py`](../../src/ensemblecontrol/risk_measures.py)):
 
 $$
-\min_{u, t, s} t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N} s_i
+\min_{u, \tau, s} t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N} s_i
 $$
 
-subject to $s_i \ge F_i - t$ and $s_i \ge 0$ for $i = 1, \ldots, N$. The scenarios
+subject to $s_i \ge F_i - \tau$ and $s_i \ge 0$ for $i = 1, \ldots, N$. The scenarios
 couple only through the shared control $u$ and threshold $t$. We solve two points on
 the risk-aversion dial, $\beta = 0.5$ and $\beta = 0.95$ (the mean over the worst
 50% and the worst 5% of scenarios); $\beta \to 1$ approaches the paper's **minimax**
