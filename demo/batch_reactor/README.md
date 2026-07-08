@@ -109,7 +109,7 @@ the slacks $s$ — a deterministic multi-scenario optimal control problem
 (implemented in [`risk_measures.py`](../../src/ensemblecontrol/risk_measures.py)):
 
 $$
-\min_{u, \tau, s} t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N} s_i
+\min_{u, \tau, s} \tau + \frac{1}{(1-\beta)N}\sum_{i=1}^{N} s_i
 $$
 
 subject to $s_i \ge F_i - \tau$ and $s_i \ge 0$ for $i = 1, \ldots, N$. The scenarios
