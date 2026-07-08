@@ -10,14 +10,16 @@ distribution of $k_{20}$ rather than at a single guessed value. This demo is bas
 > parametric uncertainty," *Chemical Engineering Communications* **131** (1995),
 > 33–52, https://doi.org/10.1080/00986449508936282
 
-The paper's three strategies map directly onto the sample-average approximation
+The paper's three strategies map directly onto the sample average approximation
 (SAA) risk settings:
 
 | Paper | Here | Meaning |
 | --- | --- | --- |
 | nominal | **nominal** | solve at the mean $k_{20} = 1000$ |
-| robust ($\min_u \mathbb{E}[J]$) | **risk-neutral SAA** | optimize the *expected* yield over $k_{20}$ |
+| robust (risk neutral) | **risk-neutral ** | optimize the *expected* yield over $k_{20}$ |
 | minimax (worst case) | **CVaR risk-averse** ($\beta = 0.5, 0.95$) | optimize the worst $(1-\beta)$ tail; two points on the risk dial, $\beta \to 1 \approx$ minimax |
+
+conditional value-at-risk (CVaR)
 
 ## The model — [batch_reactor.py](batch_reactor.py)
 
@@ -66,7 +68,7 @@ python clt_batch_reactor.py   # central-limit-theorem study
 `saa_batch_reactor.py` solves the nominal, risk-neutral, and CVaR ($\beta = 0.95$)
 policies with **IPOPT**; writes the control overlay and per-policy control/state
 plots to [output/controls-state/](output/controls-state/); writes the
-yield-vs-$k_{20}$ and out-of-sample yield-distribution figures; and runs the
+yield vs $k_{20}$ and out-of-sample yield-distribution figures; and runs the
 plug-in and subsampling confidence intervals. Flags:
 `--algorithm {plugin,subsampling,both}` (default both), `--m` / `--b`
 (subsampling count / block size), `--workers`.
@@ -98,11 +100,11 @@ fast decomposition). Writing the per-scenario loss $F_i = -x_2(t_f, \xi_i)$, the
 empirical CVaR of the loss $F$ has the Rockafellar–Uryasev variational form
 
 $$
-\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}(F_i - t)_+ \},
+\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}\max\{0,F_i - t\} \},
 $$
 
-where $(y)_+ = \max\{y, 0\}$ is the positive part and $t$ is the Value-at-Risk
-level. Introducing one slack $s_i$ per scenario to lift each $(F_i - t)_+$ turns the
+where $t$ is the Value-at-Risk
+level. Introducing one slack $s_i$ per scenario to lift each $\max\{0,F_i - t\}$ turns the
 SAA into a smooth joint minimization over the control $u$, the threshold $t$, and
 the slacks $s$ — a deterministic multi-scenario optimal control problem
 (implemented in [`risk_measures.py`](../../src/ensemblecontrol/risk_measures.py)):
@@ -163,8 +165,8 @@ yield $[B]$ under each policy (filled marker = the mean $\mathbb{E}[B]$; open ma
 
 The **worst-5% mean** is the average yield over the 5% of scenarios with the
 *lowest* yield — the mean $[B]$ you obtain on the unluckiest 5% of batches (the
-high-$k_{20}$, fast-decomposition draws). It is the empirical CVaR of the yield and
-is exactly the tail quantity the CVaR policy maximizes; a larger value means a
+high $k_{20}$, fast-decomposition draws). It is the empirical CVaR of the yield and
+is eactly the tail quantity the CVaR policy maximizes; a larger value means a
 better worst case.
 
 | policy | mean $\mathbb{E}[B]$ | worst-5% mean | min $[B]$ |
