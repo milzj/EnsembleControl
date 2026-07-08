@@ -99,7 +99,7 @@ fast decomposition). Writing the per-scenario loss $F_i = -x_2(t_f, \xi_i)$, the
 empirical CVaR of the loss $F$ has the Rockafellar–Uryasev variational form
 
 $$
-\mathrm{CVaR}_\beta(F) = \min_{\tau \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}\max\\{0,F_i - \tau\\} \},
+\mathrm{CVaR}_\beta(F) = \min_{\tau \in \mathbb{R}} \\{ \tau + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}\max\\{0,F_i - \tau\\} \\},
 $$
 
 where $\tau$ is the Value-at-Risk
