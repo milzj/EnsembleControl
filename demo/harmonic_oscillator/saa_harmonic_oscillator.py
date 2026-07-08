@@ -1,9 +1,10 @@
 """Harmonic oscillator under parametric uncertainty (arXiv:2407.18182).
 
-Solves the risk-neutral sample-average approximation of the harmonic-oscillator
-control problem of Melnikov & Milz -- uncertain angular frequency
-k ~ U[0, 2*pi] -- and then runs the two confidence-interval algorithms from
-``ensemblecontrol.inference`` on the SAA optimal value:
+Solves the sample-average approximation (SAA) of the harmonic-oscillator control
+problem of Melnikov & Milz -- uncertain angular frequency k ~ U[0, 2*pi] -- in
+two risk settings (nominal and risk-neutral), and then runs the two
+confidence-interval algorithms from ``ensemblecontrol.inference`` on the
+risk-neutral SAA optimal value:
 
   * plug-in CI (Algorithm 1)     -- normal interval under a unique optimizer,
   * subsampling CI (Algorithm 2) -- interval valid for nonunique optimizers.
@@ -16,8 +17,8 @@ its raw data to JSON and the figures are rendered from those files, so they can
 be re-plotted (relabelled, re-banded) without re-solving.
 
 The statistical procedures assume i.i.d. scenarios, so k is drawn by i.i.d.
-Monte Carlo (UniformSampler, method="mc").  Single shooting is used so the
-subsampling solves warm-start from the full-sample control with scipy L-BFGS-B.
+Monte Carlo (UniformSampler, method="mc").  Every solve uses IPOPT; single
+shooting lets the subsampling re-solves warm-start from the full-sample control.
 
 Usage (from this directory; prefix with MPLBACKEND=Agg on headless machines):
     ../../.venv/bin/python saa_harmonic_oscillator.py
@@ -31,18 +32,19 @@ Re-plot only (no solves):
 import argparse
 import os
 import sys
-from datetime import datetime
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 import ensemblecontrol
+from ensemblecontrol.inference import _BUILD_LOCK   # serialize CasADi construction
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harmonic_oscillator import HarmonicOscillator
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUTDIR = os.path.join(HERE, "output")
+CS_DIR = os.path.join(OUTDIR, "controls-state")   # nominal/risk-neutral plots
 CI_DIR = os.path.join(OUTDIR, "inference")
 
 SAMPLE_SIZES = (32, 64, 128)   # plug-in sweep; the last is the subsampling anchor
@@ -66,25 +68,54 @@ def make_sampler():
     return saa_stream, oos_fixed, oos_matched
 
 
-def solve_saa(model, samples):
-    # Single shooting + control box [-3, 3] so the subsampling solves can
-    # warm-start with scipy L-BFGS-B from the full-sample control.
-    saa = ensemblecontrol.SAAProblem(model, samples, MultipleShooting=False,
-                                     tol=1e-8)
+def solve_saa(model, samples, beta=0.0):
+    # Single shooting + control box [-3, 3]; IPOPT via SAAProblem.solve(). beta=0
+    # is risk-neutral (the sample mean); 0 < beta < 1 selects the CVaR risk-averse
+    # objective (the subsampling re-solves then warm-start from the full control).
+    saa = ensemblecontrol.SAAProblem(model, samples, beta=beta,
+                                     MultipleShooting=False, tol=1e-8)
     w_opt, f_opt = saa.solve()
     return saa, w_opt, f_opt
 
 
-def plot_solution(saa, w_opt, prefix):
+def strict_interior(w, lb=-3.0, ub=3.0, margin=0.01):
+    # Clip a warm start into the control box shrunk by a range-relative margin so
+    # it is strictly feasible for IPOPT's interior-point method -- controls that
+    # saturate at +/-3 would otherwise start exactly on the bound.
+    span = ub - lb
+    return np.clip(w, lb + margin * span, ub - margin * span)
+
+
+def ipopt_resolve_for(N, saa, w_opt):
+    # Subsampling re-solver (Algorithm 2): solve each size-b subproblem with IPOPT,
+    # warm-started -- strictly interior -- from the full-sample control. Build the
+    # subproblem under _BUILD_LOCK with the inner per-sample map pinned serial, then
+    # solve outside the lock, so the m re-solves can run in parallel (--workers)
+    # without either racing on CasADi construction or oversubscribing the cores.
+    controls = strict_interior(saa.control_matrix(w_opt))
+    def resolve(indices):
+        with _BUILD_LOCK:
+            sub = saa.subproblem(indices, parallelization="serial", n_threads=1)
+            sub.initial_decisions = sub.initial_from_controls(controls)
+        return sub.solve()[1]
+    return resolve
+
+
+def plot_solution(saa, w_opt, prefix, label=None):
+    # Control/state trajectories -> output/controls-state/<prefix>_{controls,states}.png.
+    # ``label`` is the legend prefix (defaults to the file prefix); the CVaR solves
+    # pass a beta-annotated label so the risk level shows on the plot.
+    label = prefix if label is None else label
     plotter = ensemblecontrol.SolutionPlotter(saa, w_opt)
-    plotter.plot_controls(control_labels=[r"$u_1^*(t)$", r"$u_2^*(t)$"],
-                          label_prefix=prefix,
-                          savepath=os.path.join(OUTDIR, prefix + "_controls.png"))
-    plotter.plot_states(
+    fig_c, ax_c = plotter.plot_controls(
+        control_labels=[r"$u_1^*(t)$", r"$u_2^*(t)$"], label_prefix=label)
+    ax_c.set_ylim(-3.0, 3.0)   # frame the controls against their [-3, 3] box
+    fig_c.savefig(os.path.join(CS_DIR, prefix + "_controls.png"))
+    fig_s, _ = plotter.plot_states(
         state_labels=[r"$\mathbb{E}[x_1^*(t,\xi)]$",
                       r"$\mathbb{E}[x_2^*(t,\xi)]$"],
-        label_prefix=prefix,
-        savepath=os.path.join(OUTDIR, prefix + "_states.png"))
+        label_prefix=label)
+    fig_s.savefig(os.path.join(CS_DIR, prefix + "_states.png"))
     plt.close("all")
 
 
@@ -98,17 +129,18 @@ def main():
     parser.add_argument("--b", type=int, default=None,
                         help="subsample size (Algorithm 2); default "
                              "floor(N^(6/7)) per sample size; must be < N")
+    parser.add_argument("--workers", default="auto",
+                        help="parallelism over the m subsampling re-solves per N: "
+                             "'auto' (default; no outer threads when a size-b solve "
+                             "already saturates the cores), 1, or an integer count")
     args = parser.parse_args()
 
     run_plugin = args.algorithm in ("plugin", "both")
     run_sub = args.algorithm in ("subsampling", "both")
 
     model = HarmonicOscillator()
-    os.makedirs(OUTDIR, exist_ok=True)
-
-    # One timestamped inference folder per run: output/inference/<stamp>/.
-    stamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    ci_dir = os.path.join(CI_DIR, stamp)
+    os.makedirs(CS_DIR, exist_ok=True)
+    ci_dir = CI_DIR   # fixed, timestamp-free: output/inference/
 
     saa_stream, oos_fixed, oos_matched = make_sampler()
 
@@ -124,7 +156,8 @@ def main():
     # sweep and, at each N, the subsampling anchor J_hat_N* / u_hat_N.
     samples = saa_stream.sample(SAMPLE_SIZES[-1])
     N_full = SAMPLE_SIZES[-1]
-    solves = {N: solve_saa(model, samples[:N]) for N in SAMPLE_SIZES}
+    solves = ensemblecontrol.solve_saa_prefixes(
+        lambda s: solve_saa(model, s), samples, SAMPLE_SIZES)
     plot_solution(solves[N_full][0], solves[N_full][1], "risk-neutral")
 
     print("nominal      objective  J = {:.8e}".format(float(np.ravel(f_nom)[0])))
@@ -137,8 +170,7 @@ def main():
 
     if run_plugin:
         # (i) plug-in CI with the IN-SAMPLE standard deviation (Algorithm 1)
-        records = [ensemblecontrol.plugin_confidence_interval(
-            solves[N][0], solves[N][1], f_opt=solves[N][2]) for N in SAMPLE_SIZES]
+        records = ensemblecontrol.plugin_sweep(solves, SAMPLE_SIZES)
         plugin_path = os.path.join(ci_dir, "plugin.json")
         ensemblecontrol.save_plugin_run(
             records, plugin_path,
@@ -151,9 +183,8 @@ def main():
         # the scenarios u_hat_N was fit to.  M = OOS_SIZE (large, fixed).
         oos_saa = ensemblecontrol.SAAProblem(
             model, oos_fixed.sample(OOS_SIZE), MultipleShooting=False, tol=1e-8)
-        oos_records = [ensemblecontrol.plugin_oos_confidence_interval(
-            solves[N][0], solves[N][1], oos_saa, f_opt=solves[N][2])
-            for N in SAMPLE_SIZES]
+        oos_records = ensemblecontrol.plugin_oos_sweep(
+            solves, SAMPLE_SIZES, lambda N: oos_saa)
         plugin_oos_path = os.path.join(ci_dir, "plugin_oos.json")
         ensemblecontrol.save_plugin_run(
             oos_records, plugin_oos_path,
@@ -164,11 +195,10 @@ def main():
         # (iii) same OOS variant but with M = N (out-of-sample size matched to
         # each training size), on a separate independent stream.
         oosN_full = oos_matched.sample(N_full)
-        oosN_records = [ensemblecontrol.plugin_oos_confidence_interval(
-            solves[N][0], solves[N][1],
-            ensemblecontrol.SAAProblem(model, oosN_full[:N],
-                                       MultipleShooting=False, tol=1e-8),
-            f_opt=solves[N][2]) for N in SAMPLE_SIZES]
+        oosN_records = ensemblecontrol.plugin_oos_sweep(
+            solves, SAMPLE_SIZES,
+            lambda N: ensemblecontrol.SAAProblem(
+                model, oosN_full[:N], MultipleShooting=False, tol=1e-8))
         plugin_oosN_path = os.path.join(ci_dir, "plugin_oos_matched.json")
         ensemblecontrol.save_plugin_run(
             oosN_records, plugin_oosN_path,
@@ -177,32 +207,24 @@ def main():
 
     if run_sub:
         # subsampling at each sample size N -- the analogue of the plug-in sweep.
-        # Default subsample size b = floor(N^{6/7}) PER sample size (grows with N,
-        # b/N -> 0). It is not held constant at the largest-N value because
-        # floor(Nmax^{6/7}) exceeds the smallest N. m = 5*Nmax subsamples, constant.
-        # --b/--m override with a fixed value; the legend prints the numbers used.
-        Nmax = SAMPLE_SIZES[-1]
-
-        def b_of(N):  # +1e-9 guards the float rounding at exact powers (128^{6/7}=64)
-            return args.b if args.b is not None else int(np.floor(N ** (6.0 / 7.0) + 1e-9))
-
-        m = args.m if args.m is not None else 5 * Nmax
-        for N in SAMPLE_SIZES:
-            if not (0 < b_of(N) < N):
-                parser.error("subsample size b = {} must satisfy 0 < b < N = {}"
-                             .format(b_of(N), N))
-        # Independent subsample-index streams per N (spawned for independence).
-        sub_streams = np.random.SeedSequence(SUB_SEED).spawn(len(SAMPLE_SIZES))
-        sub_records = []
-        for N, ss in zip(SAMPLE_SIZES, sub_streams):
-            saa, w_opt, f_opt = solves[N]
-            sub_records.append(ensemblecontrol.subsampling_confidence_interval(
-                saa, f_opt, b=b_of(N), m=m,
-                rng=np.random.default_rng(ss), w_opt=w_opt))
+        # Default block size b = floor(N^{6/7}) PER N (grows with N, b/N -> 0);
+        # m = 5*max(N) subsamples, constant. --b/--m override with fixed values.
+        # The per-N spawned index streams and the b-validation live in
+        # subsampling_sweep; --workers threads the m IPOPT re-solves within each N.
+        b_of = ((lambda N: args.b) if args.b is not None
+                else ensemblecontrol.default_subsample_size)
+        m = (args.m if args.m is not None
+             else ensemblecontrol.default_num_subsamples(SAMPLE_SIZES[-1]))
+        try:
+            sub_records = ensemblecontrol.subsampling_sweep(
+                solves, SAMPLE_SIZES, b_of=b_of, m=m, seed=SUB_SEED,
+                resolve_for=ipopt_resolve_for, workers=args.workers, progress=True)
+        except ValueError as err:
+            parser.error(str(err))
         sub_path = os.path.join(ci_dir, "subsampling.json")
         ensemblecontrol.save_subsampling_run(
             sub_records, sub_path,
-            meta={"resolver": "scipy-lbfgsb-warmstart", "rng_seed": SUB_SEED})
+            meta={"resolver": "ipopt-warmstart", "rng_seed": SUB_SEED})
         sub95 = sub_records[-1]["ci"]["levels"][0.95]
 
     # Render the figures (from the saved data). Share the optimal-value y-axis on
@@ -220,16 +242,16 @@ def main():
             [ci for group in ci_groups for ci in group])
     oos_labels = {"loss_label": r"$F(x_{\widehat{u}_N}(t_f,\xi'_j))$"}
     if run_plugin:
-        ensemblecontrol.plot_plugin(plugin_path, outdir=ci_dir, stamp=stamp,
+        ensemblecontrol.plot_plugin(plugin_path, outdir=ci_dir, stamp="",
                                     value_ylim=value_ylim)
         ensemblecontrol.plot_plugin(
-            plugin_oos_path, outdir=ci_dir, stamp=stamp, prefix="plugin-oos",
+            plugin_oos_path, outdir=ci_dir, stamp="", prefix="plugin-oos",
             value_ylim=value_ylim, labels=oos_labels)
         ensemblecontrol.plot_plugin(
-            plugin_oosN_path, outdir=ci_dir, stamp=stamp,
+            plugin_oosN_path, outdir=ci_dir, stamp="",
             prefix="plugin-oos-matched", value_ylim=value_ylim, labels=oos_labels)
     if run_sub:
-        ensemblecontrol.plot_subsampling(sub_path, outdir=ci_dir, stamp=stamp,
+        ensemblecontrol.plot_subsampling(sub_path, outdir=ci_dir, stamp="",
                                          value_ylim=value_ylim)
 
     print("\n95% confidence interval for J_hat_N* (N = {}):".format(N_full))

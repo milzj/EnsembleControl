@@ -263,3 +263,60 @@ def test_plot_clt_from_dict_and_path(tmp_path):
     saved = ensemblecontrol.plot_clt(path, outdir=str(tmp_path))   # from JSON path
     assert any(p.endswith("_clt_all.png") for p in saved)
     plt.close("all")
+
+
+# -- outer/inner parallelism budget (workers=) -------------------------------
+
+def test_resolve_workers_heuristic():
+    from ensemblecontrol.inference import _resolve_workers, _core_budget
+
+    budget = _core_budget()
+    assert budget == max(1, (os.cpu_count() or 1) - 2)   # reserve 2 cores
+    # heavy job: one solve already saturates the budget -> no outer parallelism
+    assert _resolve_workers("auto", 100, inner_work=budget) == 1
+    assert _resolve_workers("auto", 100, inner_work=budget + 5) == 1
+    # light job: spread across the budget, capped by njobs
+    assert _resolve_workers("auto", 100, inner_work=1) == budget
+    assert _resolve_workers("auto", 3, inner_work=1) == min(3, budget)
+    # explicit counts pass through (int or argparse string); default 1 stays 1
+    assert _resolve_workers(4, 100, inner_work=1) == 4
+    assert _resolve_workers("4", 100, inner_work=1) == 4
+    assert _resolve_workers(1, 100, inner_work=999) == 1
+
+
+def test_subsampling_workers_equivalence_and_ordering():
+    # A deterministic resolver whose value depends on the drawn index set makes
+    # the deltas nonconstant and order-sensitive, so any misalignment introduced
+    # by threading (or by the up-front index draw) would change the result.
+    model = DoubleIntegrator()
+    saa = ensemblecontrol.SAAProblem(model, [[0]] * 12, MultipleShooting=False)
+    _, f_opt = saa.solve()
+
+    def resolve(indices):
+        return float(np.ravel(f_opt)[0]) + float(np.sum(indices))
+
+    def deltas(workers):
+        return ensemblecontrol.subsampling_confidence_interval(
+            saa, f_opt, b=4, m=20, rng=np.random.default_rng(3),
+            resolve=resolve, workers=workers)["deltas"]
+
+    base = deltas(1)
+    assert base.std() > 0                          # genuinely varying
+    assert np.array_equal(base, deltas(4))         # threaded == sequential
+    assert np.array_equal(base, deltas("auto"))
+
+
+def test_subsampling_default_resolver_threaded_matches_sequential():
+    # Exercises the real lock-guarded scipy resolver + serial-inner subproblem
+    # build under threads (workers > 1) and checks it reproduces the sequential
+    # deltas bit-for-bit.
+    model = DoubleIntegrator()
+    saa = ensemblecontrol.SAAProblem(model, [[0]] * 8, MultipleShooting=False)
+    w_opt, f_opt = saa.solve()
+
+    def deltas(workers):
+        return ensemblecontrol.subsampling_confidence_interval(
+            saa, f_opt, b=4, m=6, rng=np.random.default_rng(0), w_opt=w_opt,
+            workers=workers)["deltas"]
+
+    assert np.array_equal(deltas(1), deltas(4))

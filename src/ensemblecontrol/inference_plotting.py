@@ -21,6 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+import matplotlib.ticker as mticker
 from scipy.stats import norm
 
 from .inference import (plugin_ci_from_losses, plugin_oos_ci_from_losses,
@@ -79,8 +80,16 @@ def _pct(level):
 
 
 def _stamp(stamp):
-    # dash-separated, filename-safe: 2026-07-05T19-51-18
+    # dash-separated, filename-safe: 2026-07-05T19-51-18. A caller-supplied string
+    # is returned verbatim (an empty string means "no stamp"); ``None`` auto-stamps.
     return stamp if stamp is not None else datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+
+
+def _figure_base(outdir, prefix, stamp):
+    # Figure-name stem ``<prefix>_<stamp>`` (e.g. plugin_2026-...), or just
+    # ``<prefix>`` when the stamp is empty, so timestamp-free runs get clean names.
+    s = _stamp(stamp)
+    return os.path.join(outdir, "{}_{}".format(prefix, s) if s else prefix)
 
 
 def value_ylim_across(cis, margin=0.05):
@@ -176,6 +185,32 @@ def _append_q(handles, q):
     return handles if q is None else list(handles) + [_q_handle(q)]
 
 
+def _r_handle(r):
+    # Invisible legend entry annotating the scenario radius r (relative
+    # perturbation spread), matching the demo's control/state figures.
+    return mpatches.Patch(color="none", label=r"$(r = {})$".format(r))
+
+
+def _append_qr(handles, q, r):
+    # Append the q handle, then the r handle (each only when provided), so every
+    # inference figure carries the same (q, r) annotation as the control/state plots.
+    handles = _append_q(handles, q)
+    return handles if r is None else list(handles) + [_r_handle(r)]
+
+
+def _save_formats(fig, path, formats=("png",), **savefig_kw):
+    """Save ``fig`` once per requested format, swapping the extension of ``path``.
+    Returns the list of written paths (the default single-PNG case is unchanged)."""
+    root, dot, _ext = path.rpartition(".")
+    base = root if dot else path
+    written = []
+    for fmt in formats:
+        p = "{}.{}".format(base, fmt)
+        fig.savefig(p, **savefig_kw)
+        written.append(p)
+    return written
+
+
 def _hist_legend_handles(band_levels, loss_label):
     handles = [mpatches.Patch(facecolor="0.8", edgecolor="0.4",
                               label=r"$F_i$ histogram"),
@@ -233,8 +268,8 @@ def _draw_hw_loglog(ax, cis, level):
 # -- public: plug-in figures -------------------------------------------------
 
 def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
-                levels=None, hist_bands=(0.95,), q=None, labels=None,
-                value_ylim=None):
+                levels=None, hist_bands=(0.95,), q=None, r=None, labels=None,
+                value_ylim=None, formats=("png",)):
     """Render the plug-in figures from a run (dict) or a saved JSON ``path``.
 
     Recomputes every confidence interval from the raw losses, so ``levels``,
@@ -253,6 +288,7 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
     levels = tuple(levels) if levels is not None else tuple(run["levels"])
     hist_bands = tuple(hist_bands)
     q = q if q is not None else run.get("q")
+    r = r if r is not None else run.get("r")
     loss_label, value_label, _ = _labels(labels)
 
     if run.get("variance") == "out-of-sample":
@@ -275,7 +311,7 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
         m_label = "{}-{}".format(min(Ms), max(Ms))
 
     def _params(base):
-        h = _append_q(list(base), q)
+        h = _append_qr(list(base), q, r)
         if m_label is not None:
             h.append(mpatches.Patch(
                 color="none", label=r"$M = %s$" % m_label))
@@ -286,21 +322,21 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
     saving = outdir is not None
     if saving:
         os.makedirs(outdir, exist_ok=True)
-        base = os.path.join(outdir, "{}_{}".format(prefix, _stamp(stamp)))
+        base = _figure_base(outdir, prefix, stamp)
         saved = []
     else:
         figs = []
 
     # per-sample-size histograms
-    for r, ci in zip(results, cis):
+    for rec, ci in zip(results, cis):   # not `r`: `r` is the run-level radius
         fig, ax = plt.subplots()
-        _draw_ci_hist(ax, r["N"], r["F"], ci, hist_bands, loss_label)
+        _draw_ci_hist(ax, rec["N"], rec["F"], ci, hist_bands, loss_label)
         ax.set_ylabel("count")
         ax.legend(handles=legend_handles)
         fig.tight_layout()
         if saving:
-            p = "{}_N{}.png".format(base, r["N"])
-            fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+            p = "{}_N{}.png".format(base, rec["N"])
+            saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
         else:
             figs.append((fig, ax))
 
@@ -308,14 +344,14 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
     fig, axes = plt.subplots(1, len(results), figsize=(4 * len(results), 3.4),
                              sharey=True)
     axes = np.atleast_1d(axes)
-    for ax, r, ci in zip(axes, results, cis):
-        _draw_ci_hist(ax, r["N"], r["F"], ci, hist_bands, loss_label)
+    for ax, rec, ci in zip(axes, results, cis):
+        _draw_ci_hist(ax, rec["N"], rec["F"], ci, hist_bands, loss_label)
     axes[0].set_ylabel("count")
     axes[-1].legend(handles=legend_handles, fontsize="small")
     fig.tight_layout()
     if saving:
         p = "{}_all.png".format(base)
-        fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+        saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
     else:
         figs.append((fig, axes))
 
@@ -331,7 +367,7 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
         fig.tight_layout()
         if saving:
             p = "{}_ci{:.0f}.png".format(base, 100 * level)
-            fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+            saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
         else:
             figs.append((fig, ax))
 
@@ -344,7 +380,7 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
         fig.tight_layout()
         if saving:
             p = "{}_ci{:.0f}_scaling.png".format(base, 100 * level)
-            fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+            saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
         else:
             figs.append((fig, ax))
 
@@ -356,12 +392,12 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
 
 # -- subsampling drawing helpers ---------------------------------------------
 
-def _bmnq_handles(rec, q):
-    """Invisible legend entries listing N, b, m (and q) for one sample size."""
+def _bmnq_handles(rec, q, r=None):
+    """Invisible legend entries listing N, b, m (and q, r) for one sample size."""
     handles = [mpatches.Patch(color="none", label=r"$N = {}$".format(rec["N"])),
                mpatches.Patch(color="none", label=r"$b = {}$".format(rec["b"])),
                mpatches.Patch(color="none", label=r"$m = {}$".format(rec["m"]))]
-    return _append_q(handles, q)
+    return _append_qr(handles, q, r)
 
 
 def _param_handles(results, key, label=None):
@@ -369,27 +405,28 @@ def _param_handles(results, key, label=None):
 
     ``label`` (a LaTeX string) is printed verbatim as ``<key> = <label>`` if
     given.  Otherwise a single ``<key> = value`` when the value is constant across
-    the sweep, else a single entry listing the per-N values on one line in
-    sample-size order, ``<key> = v1, v2, ...`` (matching the N order on the
-    x-axis)."""
+    the sweep, else a single entry listing the per-N values subscripted by their
+    sample size in N order, ``<key>_{N1} = v1, <key>_{N2} = v2, ...`` (matching the
+    N order on the x-axis)."""
     if label is not None:
         return [mpatches.Patch(color="none", label=r"${} = {}$".format(key, label))]
     vals = [r[key] for r in results]
     if len(set(vals)) == 1:
         return [mpatches.Patch(color="none",
                                label=r"${} = {}$".format(key, vals[0]))]
-    joined = ", ".join(str(v) for v in vals)
-    return [mpatches.Patch(color="none", label=r"${} = {}$".format(key, joined))]
+    joined = ", ".join(r"{}_{{{}}} = {}".format(key, r["N"], r[key])
+                       for r in results)
+    return [mpatches.Patch(color="none", label=r"${}$".format(joined))]
 
 
-def _bmq_handles(results, q, b_label=None, m_label=None):
-    """Invisible legend entries listing b, m (and q) for the sweep plot; N is on
+def _bmq_handles(results, q, r=None, b_label=None, m_label=None):
+    """Invisible legend entries listing b, m (and q, r) for the sweep plot; N is on
     the x-axis.  When b or m varies across the sweep, each sample size gets its
     own ``b_{N} = ...`` / ``m_{N} = ...`` entry; a constant value is shown once.
     ``b_label``/``m_label`` override with a verbatim LaTeX string."""
     handles = (_param_handles(results, "b", b_label)
                + _param_handles(results, "m", m_label))
-    return _append_q(handles, q)
+    return _append_qr(handles, q, r)
 
 
 def _draw_subsampling_hist(ax, deltas, band, delta_label):
@@ -431,8 +468,9 @@ def _draw_subsampling_ci_sweep(ax, cis, level, value_label):
 # -- public: subsampling figures ---------------------------------------------
 
 def plot_subsampling(run_or_path, outdir=None, prefix="subsampling", stamp=None,
-                     levels=None, band_level=0.95, q=None, labels=None,
-                     value_ylim=None, b_label=None, m_label=None):
+                     levels=None, band_level=0.95, q=None, r=None, labels=None,
+                     value_ylim=None, b_label=None, m_label=None,
+                     formats=("png",)):
     """Render the subsampling figures from a run (dict) or a saved JSON ``path``.
 
     The run holds one record per sample size N (the subsampling analogue of the
@@ -455,6 +493,7 @@ def plot_subsampling(run_or_path, outdir=None, prefix="subsampling", stamp=None,
     if band_level not in levels:
         levels = tuple(sorted(set(levels) | {band_level}))
     q = q if q is not None else run.get("q")
+    r = r if r is not None else run.get("r")
     _, value_label, delta_label = _labels(labels)
     # b/m legend text: explicit arg > expression stored in the run meta > value
     meta = run.get("meta") or {}
@@ -467,30 +506,30 @@ def plot_subsampling(run_or_path, outdir=None, prefix="subsampling", stamp=None,
     saving = outdir is not None
     if saving:
         os.makedirs(outdir, exist_ok=True)
-        base = os.path.join(outdir, "{}_{}".format(prefix, _stamp(stamp)))
+        base = _figure_base(outdir, prefix, stamp)
         saved = []
     else:
         figs = []
 
     # per-N Delta_r histogram with the band_level quantiles marked
-    for r, ci in zip(results, cis):
+    for rec, ci in zip(results, cis):
         band = ci["levels"][band_level]
         fig, ax = plt.subplots()
-        _draw_subsampling_hist(ax, r["deltas"], band, delta_label)
+        _draw_subsampling_hist(ax, rec["deltas"], band, delta_label)
         ci_handle = mpatches.Patch(color="none", label="{} CI: [{:.4g}, {:.4g}]"
                                    .format(_pct(band_level), band["lo"], band["hi"]))
         handles, _ = ax.get_legend_handles_labels()
-        ax.legend(handles=handles + [ci_handle] + _bmnq_handles(r, q))
+        ax.legend(handles=handles + [ci_handle] + _bmnq_handles(rec, q, r))
         fig.tight_layout()
         if saving:
-            p = "{}_hist_N{}.png".format(base, r["N"])
-            fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+            p = "{}_hist_N{}.png".format(base, rec["N"])
+            saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
         else:
             figs.append((fig, ax))
 
     # per-level subsampling CI across the sample sizes (plug-in-style sweep) and
     # the interval half-width vs N log-log scaling (like the plug-in _scaling)
-    bmq = _bmq_handles(results, q, b_label=b_label, m_label=m_label)
+    bmq = _bmq_handles(results, q, r=r, b_label=b_label, m_label=m_label)
     for level in levels:
         fig, ax = plt.subplots()
         _draw_subsampling_ci_sweep(ax, cis, level, value_label)
@@ -501,7 +540,7 @@ def plot_subsampling(run_or_path, outdir=None, prefix="subsampling", stamp=None,
         fig.tight_layout()
         if saving:
             p = "{}_ci{:.0f}.png".format(base, 100 * level)
-            fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+            saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
         else:
             figs.append((fig, ax))
 
@@ -514,7 +553,7 @@ def plot_subsampling(run_or_path, outdir=None, prefix="subsampling", stamp=None,
         fig.tight_layout()
         if saving:
             p = "{}_ci{:.0f}_scaling.png".format(base, 100 * level)
-            fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+            saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
         else:
             figs.append((fig, ax))
 
@@ -544,7 +583,35 @@ def _draw_clt_hist(ax, stat):
     ax.set_xlabel(r"$N^{1/2}(\widehat J_N^* - \widehat J_{\mathrm{ref}}^*)$")
 
 
-def _clt_legend_handles(N, N_ref, R, q):
+def _shared_ticks(lo, hi):
+    # Ticks from AutoLocator are chosen from (lo, hi) alone -- unlike the default
+    # axis locator, which also factors in the axis's physical width and so would
+    # pick a different tick count for the narrow overview panels than for the
+    # standalone figures. Filter to the view so the outermost ticks sit inside.
+    ticks = mticker.AutoLocator().tick_values(lo, hi)
+    return [t for t in ticks if lo <= t <= hi]
+
+
+def _unify_hist_axes(axes):
+    """Give every Axes one common x/y range AND the same explicit ticks, so
+    histograms across separate figures and overview panels are directly
+    comparable.  No-op for fewer than two axes."""
+    axes = [ax for ax in axes if ax is not None]
+    if len(axes) < 2:
+        return
+    xlo = min(ax.get_xlim()[0] for ax in axes)
+    xhi = max(ax.get_xlim()[1] for ax in axes)
+    ylo = min(ax.get_ylim()[0] for ax in axes)
+    yhi = max(ax.get_ylim()[1] for ax in axes)
+    xticks, yticks = _shared_ticks(xlo, xhi), _shared_ticks(ylo, yhi)
+    for ax in axes:
+        ax.set_xticks(xticks)
+        ax.set_yticks(yticks)
+        ax.set_xlim(xlo, xhi)
+        ax.set_ylim(ylo, yhi)
+
+
+def _clt_legend_handles(N, N_ref, R, q, r=None):
     handles = [mpatches.Patch(facecolor="0.8", edgecolor="0.4", label="empirical"),
                mlines.Line2D([], [], color="C0", lw=1.5, label="normal fit"),
                mlines.Line2D([], [], color="k", lw=1.0, ls=":", label="0"),
@@ -552,11 +619,11 @@ def _clt_legend_handles(N, N_ref, R, q):
                mpatches.Patch(color="none",
                               label=r"$N_{\mathrm{ref}} = %d$" % N_ref),
                mpatches.Patch(color="none", label=r"$R = {}$".format(R))]
-    return _append_q(handles, q)
+    return _append_qr(handles, q, r)
 
 
-def plot_clt(run_or_path, outdir=None, prefix="clt", stamp=None, q=None,
-             labels=None):
+def plot_clt(run_or_path, outdir=None, prefix="clt", stamp=None, q=None, r=None,
+             labels=None, formats=("png",)):
     """Render the limit-theorem histograms from a run (dict) or saved JSON ``path``.
 
     For each sample size N the statistic sqrt(N)*(J_hat_N* - J_hat_ref*) is
@@ -574,44 +641,56 @@ def plot_clt(run_or_path, outdir=None, prefix="clt", stamp=None, q=None,
     N_ref = run["N_ref"]
     f_ref = run["f_ref"]
     q = q if q is not None else run.get("q")
-    stats = [clt_statistic(r["values"], r["N"], f_ref) for r in results]
+    r = r if r is not None else run.get("r")
+    stats = [clt_statistic(rec["values"], rec["N"], f_ref) for rec in results]
 
     saving = outdir is not None
     if saving:
         os.makedirs(outdir, exist_ok=True)
-        base = os.path.join(outdir, "{}_{}".format(prefix, _stamp(stamp)))
+        base = _figure_base(outdir, prefix, stamp)
         saved = []
     else:
         figs = []
 
-    # per-N histograms (each saved separately)
-    for r, stat in zip(results, stats):
+    # per-N histograms (each saved separately). Drawn first and kept open so
+    # every CLT histogram -- these plus the combined overview panels -- can be
+    # given one common x/y range (=> identical ticks) for comparison across N.
+    per_n = []
+    for rec, stat in zip(results, stats):
         fig, ax = plt.subplots()
         _draw_clt_hist(ax, stat)
         ax.set_ylabel("density")
-        ax.legend(handles=_clt_legend_handles(r["N"], N_ref, stat.size, q))
-        fig.tight_layout()
-        if saving:
-            p = "{}_clt_N{}.png".format(base, r["N"])
-            fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
-        else:
-            figs.append((fig, ax))
+        ax.legend(handles=_clt_legend_handles(rec["N"], N_ref, stat.size, q, r))
+        per_n.append((fig, ax, rec["N"]))
 
     # combined small-multiples overview
-    fig, axes = plt.subplots(1, len(results), figsize=(4 * len(results), 3.4))
+    fig_all, axes = plt.subplots(1, len(results), figsize=(4 * len(results), 3.4))
     axes = np.atleast_1d(axes)
-    for ax, r, stat in zip(axes, results, stats):
+    for ax, rec, stat in zip(axes, results, stats):
         _draw_clt_hist(ax, stat)
-        ax.legend(handles=_clt_legend_handles(r["N"], N_ref, stat.size, q),
+        ax.legend(handles=_clt_legend_handles(rec["N"], N_ref, stat.size, q, r),
                   fontsize="small")
     axes[0].set_ylabel("density")
-    fig.suptitle(r"$N^{1/2}(\widehat J_N^* - \widehat J_{\mathrm{ref}}^*)$")
-    fig.tight_layout()
+    fig_all.suptitle(r"$N^{1/2}(\widehat J_N^* - \widehat J_{\mathrm{ref}}^*)$")
+
+    # unify axes only when more than one N is plotted (a single-N run is left as-is)
+    if len(results) >= 2:
+        _unify_hist_axes([ax for _, ax, _ in per_n] + list(axes))
+
+    # finalize + emit: per-N figures in N order, then the combined overview
+    for fig, ax, N in per_n:
+        fig.tight_layout()
+        if saving:
+            p = "{}_clt_N{}.png".format(base, N)
+            saved += _save_formats(fig, p, formats, dpi=130); plt.close(fig)
+        else:
+            figs.append((fig, ax))
+    fig_all.tight_layout()
     if saving:
         p = "{}_clt_all.png".format(base)
-        fig.savefig(p, dpi=130); plt.close(fig); saved.append(p)
+        saved += _save_formats(fig_all, p, formats, dpi=130); plt.close(fig_all)
     else:
-        figs.append((fig, axes))
+        figs.append((fig_all, axes))
 
     if saving:
         print("[inference] wrote CLT figures to {}_clt_*".format(base))

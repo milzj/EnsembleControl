@@ -99,7 +99,8 @@ class SolutionPlotter(object):
             self.state_std[j] = np.std(component, axis=0)
 
     def plot_states(self, ax=None, state_labels=None, per_state=False, band=True,
-                    annotate=True, label_prefix=None, savepath=None):
+                    nsigma=1, annotate=True, radius=None, label_prefix=None,
+                    savepath=None, formats=("png",)):
 
         _configure_fonts()
 
@@ -116,24 +117,28 @@ class SolutionPlotter(object):
             axes = []
             for j in range(n_states):
                 fig, axis = plt.subplots()
-                self._draw_state(axis, j, state_labels[j], band, label_prefix)
-                self._finalize(axis, annotate)
+                self._draw_state(axis, j, state_labels[j], band, label_prefix,
+                                 nsigma=nsigma)
+                self._finalize(axis, annotate, radius=radius)
                 if savepath is not None:
-                    fig.savefig(self._expand_savepath(savepath, state_labels[j]))
+                    self._save(fig, self._expand_savepath(savepath,
+                                                          state_labels[j]), formats)
                 figs.append(fig)
                 axes.append(axis)
             return figs, axes
 
         fig, ax = self._axes(ax)
         for j in range(n_states):
-            self._draw_state(ax, j, state_labels[j], band, label_prefix)
-        self._finalize(ax, annotate)
+            self._draw_state(ax, j, state_labels[j], band, label_prefix,
+                             nsigma=nsigma)
+        self._finalize(ax, annotate, radius=radius)
         if savepath is not None:
-            fig.savefig(savepath)
+            self._save(fig, savepath, formats)
         return fig, ax
 
     def plot_controls(self, ax=None, control_labels=None, step=False,
-                      annotate=True, label_prefix=None, savepath=None):
+                      annotate=True, radius=None, label_prefix=None,
+                      savepath=None, formats=("png",)):
 
         _configure_fonts()
 
@@ -152,9 +157,9 @@ class SolutionPlotter(object):
                 ax.step(self.tgrid, y, where='pre', label=label)
             else:
                 ax.plot(self.tgrid, y, '-.', label=label)
-        self._finalize(ax, annotate)
+        self._finalize(ax, annotate, radius=radius)
         if savepath is not None:
-            fig.savefig(savepath)
+            self._save(fig, savepath, formats)
         return fig, ax
 
     def plot(self, state_labels=None, control_labels=None, band=True, step=False,
@@ -183,27 +188,48 @@ class SolutionPlotter(object):
             return label
         return "({}) {}".format(label_prefix, label)
 
-    def _draw_state(self, ax, j, label, band, label_prefix):
+    def _draw_state(self, ax, j, label, band, label_prefix, nsigma=1):
         line, = ax.plot(self.tgrid, self.state_mean[j],
                         label=self._label(label, label_prefix))
         if band:
+            # +/- nsigma * std ensemble band (nsigma=1 by default; e.g. 3 for a
+            # +/-3 sigma band). The band is only labelled for nsigma != 1.
+            band_label = (r"$\pm{}\sigma$".format(nsigma) if nsigma != 1 else None)
             ax.fill_between(self.tgrid,
-                            self.state_mean[j]-self.state_std[j],
-                            self.state_mean[j]+self.state_std[j],
-                            color=line.get_color(), alpha=0.15)
+                            self.state_mean[j]-nsigma*self.state_std[j],
+                            self.state_mean[j]+nsigma*self.state_std[j],
+                            color=line.get_color(), alpha=0.15, label=band_label)
 
-    def _finalize(self, ax, annotate):
+    def _finalize(self, ax, annotate, radius=None):
         ax.set_xlabel(r'$t$')
         ax.grid()
         if annotate:
             handles, labels = ax.get_legend_handles_labels()
             handles.append(mpatches.Patch(color='none'))
-            labels.append(r"($\alpha={}, n={}, N={}$)".format(self.alpha,
-                                                              self.nintervals,
-                                                              self.nsamples))
+            if radius is not None:
+                # fed-batch template legend: sample size N, control-mesh size q
+                # (= number of control intervals), scenario radius r.
+                labels.append(r"($N={}, q={}, r={}$)".format(self.nsamples,
+                                                             self.nintervals,
+                                                             radius))
+            else:
+                labels.append(r"($\alpha={}, n={}, N={}$)".format(self.alpha,
+                                                                  self.nintervals,
+                                                                  self.nsamples))
             ax.legend(handles, labels)
         else:
             ax.legend()
+
+    def _save(self, fig, path, formats=("png",)):
+        # Preserve byte-for-byte legacy behavior for the default single-PNG case;
+        # for multiple formats, swap the extension per format.
+        if tuple(formats) == ("png",):
+            fig.savefig(path)
+            return
+        root, dot, _ext = path.rpartition(".")
+        base = root if dot else path
+        for fmt in formats:
+            fig.savefig("{}.{}".format(base, fmt))
 
     def _expand_savepath(self, savepath, label):
         if "{}" in savepath:

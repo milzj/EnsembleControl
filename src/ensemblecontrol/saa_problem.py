@@ -133,7 +133,7 @@ class SAAProblem(object):
             controls[c] = w[idx_control[c::ncontrols]].flatten()
         return controls.T
 
-    def subproblem(self, indices):
+    def subproblem(self, indices, parallelization=None, n_threads=None):
         """A new SAAProblem restricted to samples[indices], reusing this
         problem's configuration.
 
@@ -142,6 +142,13 @@ class SAAProblem(object):
         indices and cannot be remapped generically, so a problem carrying them
         is rejected here; supply a custom resolver to the subsampling routine
         instead.
+
+        ``parallelization`` and ``n_threads`` default to this problem's own map
+        settings (``None`` -> inherit). Override them -- e.g.
+        ``parallelization="serial", n_threads=1`` -- when the subproblem is
+        solved inside an already-parallel outer loop, so the inner per-sample
+        CasADi map does not oversubscribe the cores (see
+        :func:`ensemblecontrol.inference.subsampling_confidence_interval`).
         """
         if self.terminal_constraints is not None:
             raise ValueError(
@@ -153,8 +160,13 @@ class SAAProblem(object):
                           beta=self.beta, MultipleShooting=self.MultipleShooting,
                           tv_rho=self.tv_rho, ipopt_options=self.ipopt_options,
                           tol=self.tol, integrator=self.integrator,
-                          lbfgs=self.lbfgs, parallelization=self.parallelization,
-                          n_threads=self.n_threads, expand=self.expand,
+                          lbfgs=self.lbfgs,
+                          parallelization=(self.parallelization
+                                           if parallelization is None
+                                           else parallelization),
+                          n_threads=(self.n_threads if n_threads is None
+                                     else n_threads),
+                          expand=self.expand,
                           steps_per_interval=self.steps_per_interval,
                           terminal_constraints=None,
                           precondition=self.precondition)
