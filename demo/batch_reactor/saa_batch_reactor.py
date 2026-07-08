@@ -61,7 +61,8 @@ OOS_SIZE = 512      # fresh out-of-sample draw for the OOS-s.d. plug-in
 STEPS = 10          # RK4 sub-steps per control interval (accurate rollout)
 T_LO, T_HI = 340.0, 420.0       # temperature box (control bounds)
 K20_LO, K20_HI = 500.0, 2000.0  # k20 uncertainty interval (Sec. 3.1)
-LINESTYLES = ("-", "--", "-.")  # nominal / risk-neutral / CVaR -- distinct line types
+LINESTYLES = ("-", "--", "-.", ":")   # nominal / risk-neutral / CVaR 0.5 / CVaR 0.95
+COLORS = ("C0", "C1", "C2", "C3")     # same order -- consistent across every figure
 
 
 def make_sampler():
@@ -140,14 +141,15 @@ def b_trajectory_stats(model, w_opt, samples):
     return tgrid, B.mean(axis=0), B.std(axis=0)
 
 
-def plot_states_B(prefix, label, tgrid, mean, std, ylim):
-    # Product-only state plot: the [B] ensemble mean E[B(t, xi)] with a +/- 3 s.d.
-    # band over the k20 draw -> output/controls-state/<prefix>_states.png. The
-    # y-axis is shared across policies for a direct spread comparison.
+def plot_states_B(prefix, label, tgrid, mean, std, ylim, color="C1"):
+    # Product-only state plot: the [B] ensemble mean E[B(t, xi)] with a +/- 3
+    # standard-deviation band over the k20 draw -> output/controls-state/
+    # <prefix>_states.png. The y-axis is shared across policies for a direct spread
+    # comparison; the color matches the policy's color in the overlay figures.
     fig, ax = plt.subplots()
-    ax.plot(tgrid, mean, color="C1", label=r"%s  $\mathbb{E}[B(t,\xi)]$" % label)
-    ax.fill_between(tgrid, mean - 3.0 * std, mean + 3.0 * std, color="C1",
-                    alpha=0.2, label=r"$\pm 3$ s.d.")
+    ax.plot(tgrid, mean, color=color, label=r"%s  $\mathbb{E}[B(t,\xi)]$" % label)
+    ax.fill_between(tgrid, mean - 3.0 * std, mean + 3.0 * std, color=color,
+                    alpha=0.2, label=r"$\pm 3$ standard deviations")
     ax.set_ylim(*ylim)
     ax.set_xlabel(r"$t$")
     ax.set_ylabel(r"$[B]$")
@@ -163,9 +165,10 @@ def plot_all_controls(model, policies, savepath):
     # over (t_k, t_{k+1}]); the leading NaN matches len(tgrid).
     tgrid = np.array([model.mesh_width * k for k in range(model.nintervals + 1)])
     fig, ax = plt.subplots()
-    for (label, w_opt), ls in zip(policies, LINESTYLES):
+    for (label, w_opt), ls, color in zip(policies, LINESTYLES, COLORS):
         u = np.asarray(w_opt, float).ravel()[:model.nintervals]   # front block = T(t)
-        ax.step(tgrid, np.concatenate([[np.nan], u]), where="pre", ls=ls, label=label)
+        ax.step(tgrid, np.concatenate([[np.nan], u]), where="pre", ls=ls,
+                color=color, label=label)
     ax.set_ylim(T_LO, T_HI)
     ax.set_yticks(np.arange(T_LO, T_HI + 1.0, 20.0))
     ax.set_xlabel(r"$t$")
@@ -193,8 +196,9 @@ def plot_yield_vs_k20(model, policies, savepath):
     # nominal k20 for a flatter, higher curve in the worst-case tail).
     k20_grid = np.linspace(K20_LO, K20_HI, 151)
     fig, ax = plt.subplots()
-    for (label, w_opt), ls in zip(policies, LINESTYLES):
-        ax.plot(k20_grid, terminal_B(model, w_opt, k20_grid), ls=ls, label=label)
+    for (label, w_opt), ls, color in zip(policies, LINESTYLES, COLORS):
+        ax.plot(k20_grid, terminal_B(model, w_opt, k20_grid), ls=ls, color=color,
+                label=label)
     ax.axvline(1000.0, color="0.6", lw=0.8, ls=":")      # nominal k20
     ax.set_xlabel(r"$k_{20}$")
     ax.set_ylabel(r"$[B](t_f)$")
@@ -227,20 +231,31 @@ def risk_illustration(model, policies, savepath, n_oos=2000, seed=7):
     fig, ax = plt.subplots()
     print("\n{:>16s}  {:>10s}  {:>12s}  {:>10s}".format(
         "policy", "E[B]", "worst-5% B", "min B"))
-    for label, w_opt in policies:
+    for (label, w_opt), ls, color in zip(policies, LINESTYLES, COLORS):
         B = terminal_B(model, w_opt, oos)
         var5 = np.quantile(B, 0.05)                  # 5% Value-at-Risk (yield)
         cvar5 = float(B[B <= var5].mean())           # mean of the worst 5% yields
-        _, _, patches = ax.hist(B, bins=50, histtype="step", density=True, lw=1.5,
-                                label=label)
-        color = patches[0].get_edgecolor()
-        ax.axvline(float(B.mean()), color=color, ls="-", lw=1.0)   # mean
-        ax.axvline(cvar5, color=color, ls="--", lw=1.0)            # worst-5% mean
+        # Per-policy line style AND color (solid/dashed/dash-dot, C0/C1/C2) match the
+        # control and yield-vs-k20 plots, so a policy reads the same way everywhere.
+        ax.hist(B, bins=50, histtype="step", density=True, lw=1.5,
+                ls=ls, color=color, label=label)
+        mean_B = float(B.mean())
+        # Mean and worst-5% marked on the x-axis (clearer than thin full-height guide
+        # lines against the histogram): filled up-triangle = mean, open = worst-5%.
+        ax.plot(mean_B, 0, marker="^", color=color, ms=9,
+                clip_on=False, zorder=5)
+        ax.plot(cvar5, 0, marker="^", mfc="white", mec=color, mew=1.3, ms=9,
+                clip_on=False, zorder=5)
         print("{:>16s}  {:>10.4f}  {:>12.4f}  {:>10.4f}".format(
             label, float(B.mean()), cvar5, float(B.min())))
     ax.set_xlabel(r"$[B](t_f)$")
     ax.set_ylabel(r"density over $k_{20}\sim$ truncnorm")
-    ax.set_title(r"solid = mean $\mathbb{E}[B]$,  dashed = worst-5\% mean")
+    # Neutral proxy handles so the legend (not the title) explains the marker shapes;
+    # color still encodes the policy. Filled = mean, open = worst-5% mean.
+    ax.plot([], [], ls="none", marker="^", color="0.3", ms=9,
+            label=r"mean $\mathbb{E}[B]$")
+    ax.plot([], [], ls="none", marker="^", mfc="white", mec="0.3", mew=1.3, ms=9,
+            label=r"worst-5\% mean")
     ax.grid(True)
     ax.legend()
     fig.savefig(savepath)
@@ -289,12 +304,17 @@ def main():
     saa_rn, w_rn = solves[N_full][0], solves[N_full][1]
 
     # CVaR risk-averse on the SAME N-scenario ensemble (beta -> 1 approaches the
-    # paper's minimax / worst case): beta = 0.95 optimizes the mean of the worst 5%
-    # terminal-yield tail.
+    # paper's minimax / worst case). Two points on the risk-aversion dial: beta = 0.5
+    # optimizes the mean of the worst 50% terminal-yield tail, beta = 0.95 the worst
+    # 5%. beta = 0.95 is the one carried into the statistical-inference section below.
+    beta_mid = 0.5
+    saa_cv_mid, w_cv_mid, _ = solve_saa(model, samples, beta=beta_mid)
+    cvar_mid_label = r"CVaR $\beta={}$".format(beta_mid)
     beta = 0.95
     saa_cv, w_cv, f_cv = solve_saa(model, samples, beta=beta)
     cvar_label = r"CVaR $\beta={}$".format(beta)
-    policies = [("nominal", w_nom), ("risk-neutral", w_rn), (cvar_label, w_cv)]
+    policies = [("nominal", w_nom), ("risk-neutral", w_rn),
+                (cvar_mid_label, w_cv_mid), (cvar_label, w_cv)]
 
     # Per-policy control trajectories, then the product-only B-state ensembles.
     # Every control is simulated across the SAME full k20 ensemble, so the +/- 3
@@ -303,17 +323,20 @@ def main():
     # y-axis (the nominal control, tuned to k20 = 1000, spreads most in the tail).
     plot_control(saa_nom, w_nom, "nominal", "nominal")
     plot_control(saa_rn, w_rn, "risk-neutral", "risk-neutral")
+    plot_control(saa_cv_mid, w_cv_mid, "cvar-{:.2f}".format(beta_mid), cvar_mid_label)
     plot_control(saa_cv, w_cv, "cvar-{:.2f}".format(beta), cvar_label)
 
     state_specs = [("nominal", "nominal", w_nom),
                    ("risk-neutral", "risk-neutral", w_rn),
+                   ("cvar-{:.2f}".format(beta_mid), cvar_mid_label, w_cv_mid),
                    ("cvar-{:.2f}".format(beta), cvar_label, w_cv)]
     stats = {prefix: b_trajectory_stats(model, w, samples)
              for prefix, _, w in state_specs}
     ymax = max(float((m + 3.0 * s).max()) for _, m, s in stats.values())
-    for prefix, lab, _ in state_specs:
+    for (prefix, lab, _), color in zip(state_specs, COLORS):
         tgrid, mean, std = stats[prefix]
-        plot_states_B(prefix, lab, tgrid, mean, std, ylim=(0.0, 1.05 * ymax))
+        plot_states_B(prefix, lab, tgrid, mean, std, ylim=(0.0, 1.05 * ymax),
+                      color=color)
 
     # Paper Table 1 + Figure 2 from the solved controls; the all-policy control
     # overlay; and the out-of-sample yield distribution illustrating the risk
@@ -412,7 +435,7 @@ def main():
     # reported below (subtract from 0 to read it as a bound on the expected yield).
     print("\n95% confidence interval for J_hat_N* = E[-B] (N = {}):".format(N_full))
     if plugin95 is not None:
-        print("  plug-in (in-sample s.d.) : [{:.6e}, {:.6e}]  half-width {:.6e}"
+        print("  plug-in (in-sample standard deviation) : [{:.6e}, {:.6e}]  half-width {:.6e}"
               .format(plugin95["lo"], plugin95["hi"], plugin95["halfwidth"]))
     if oos95 is not None:
         print("  plug-in (out-of-sample)  : [{:.6e}, {:.6e}]  half-width {:.6e}"

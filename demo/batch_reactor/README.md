@@ -17,7 +17,7 @@ The paper's three strategies map directly onto the sample-average approximation
 | --- | --- | --- |
 | nominal | **nominal** | solve at the mean $k_{20} = 1000$ |
 | robust ($\min_u \mathbb{E}[J]$) | **risk-neutral SAA** | optimize the *expected* yield over $k_{20}$ |
-| minimax (worst case) | **CVaR risk-averse** | optimize the worst $(1-\beta)$ tail; $\beta \to 1 \approx$ minimax |
+| minimax (worst case) | **CVaR risk-averse** ($\beta = 0.5, 0.95$) | optimize the worst $(1-\beta)$ tail; two points on the risk dial, $\beta \to 1 \approx$ minimax |
 
 ## The model — [batch_reactor.py](batch_reactor.py)
 
@@ -26,7 +26,7 @@ With $x_1 = [A]$ and $x_2 = [B]$:
 - **State** $x = (x_1, x_2) \in \mathbb{R}^2$, **control** $T(t)$ (temperature),
   **horizon** $t_f = 1$.
 - **Dynamics** (dimensionless, Eqs. 22–23; $[C]$ eliminated by the mass balance
-  $[A] + 2[B] + 2[C] = \text{const}$):
+  $[A] + 2[B] + 2[C] = \mathrm{const}$):
 
 $$
 \dot{x}_1 = -2 k_1 x_1^2, \qquad
@@ -63,11 +63,6 @@ python saa_batch_reactor.py   # policies + control/state + yield + confidence in
 python clt_batch_reactor.py   # central-limit-theorem study
 ```
 
-The drivers only ever `savefig` (they never call `plt.show()`), so any matplotlib
-backend works — `MPLBACKEND=Agg` is **not** required. On a headless machine, prefix
-the command with it to force the non-interactive backend, e.g.
-`MPLBACKEND=Agg python saa_batch_reactor.py`.
-
 `saa_batch_reactor.py` solves the nominal, risk-neutral, and CVaR ($\beta = 0.95$)
 policies with **IPOPT**; writes the control overlay and per-policy control/state
 plots to [output/controls-state/](output/controls-state/); writes the
@@ -103,66 +98,66 @@ fast decomposition). Writing the per-scenario loss $F_i = -x_2(t_f, \xi_i)$, the
 empirical CVaR of the loss $F$ has the Rockafellar–Uryasev variational form
 
 $$
-\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \left\{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}(F_i - t)_+ \right\},
-\qquad (y)_+ = \max\{y, 0\},
+\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}(F_i - t)_+ \},
 $$
 
-where $t$ is the Value-at-Risk level. Introducing one slack $s_i$ per scenario to
-lift each $(F_i - t)_+$ turns the SAA into a smooth joint minimization over the
-control $u$, the threshold $t$, and the slacks $s$ — a deterministic
-multi-scenario optimal control problem (implemented in
-[`risk_measures.py`](../../src/ensemblecontrol/risk_measures.py)):
+where $(y)_+ = \max\{y, 0\}$ is the positive part and $t$ is the Value-at-Risk
+level. Introducing one slack $s_i$ per scenario to lift each $(F_i - t)_+$ turns the
+SAA into a smooth joint minimization over the control $u$, the threshold $t$, and
+the slacks $s$ — a deterministic multi-scenario optimal control problem
+(implemented in [`risk_measures.py`](../../src/ensemblecontrol/risk_measures.py)):
 
 $$
-\begin{aligned}
-\min_{u, t, s} \quad & t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N} s_i \\
-\text{s.t.} \quad & s_i \ge F_i - t, \quad s_i \ge 0, \quad i = 1, \ldots, N.
-\end{aligned}
+\min_{u, t, s} t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N} s_i
 $$
 
-The scenarios couple only through the shared control $u$ and threshold $t$. Here
-$\beta = 0.95$; $\beta \to 1$ approaches the paper's **minimax** (worst-case)
-policy.
+subject to $s_i \ge F_i - t$ and $s_i \ge 0$ for $i = 1, \ldots, N$. The scenarios
+couple only through the shared control $u$ and threshold $t$. We solve two points on
+the risk-aversion dial, $\beta = 0.5$ and $\beta = 0.95$ (the mean over the worst
+50% and the worst 5% of scenarios); $\beta \to 1$ approaches the paper's **minimax**
+(worst-case) policy.
 
 ## Control profiles
 
-The optimal temperature profiles $T(t)$ for the three policies, overlaid on the
-$[340, 420]$ box (each policy drawn with a distinct line style): hot early to drive
-the main reaction, then cooling toward the end to suppress the $B \to C$
-decomposition — the CVaR profile runs coolest through the tail-sensitive second
-half.
+The optimal temperature profiles $T(t)$ for the four policies, overlaid on the
+$[340, 420]$ box (each policy drawn with a distinct color and line style): hot early
+to drive the main reaction, then cooling toward the end to suppress the $B \to C$
+decomposition — the more risk-averse the policy, the cooler it runs through the
+tail-sensitive second half, with CVaR $\beta = 0.95$ coolest and $\beta = 0.5$
+sitting between it and risk-neutral.
 
 ![all controls](output/controls-state/all_controls.png)
 
 Per-policy temperature profiles are in
 [output/controls-state/](output/controls-state/) as
-`{nominal,risk-neutral,cvar-0.95}_control.png`.
+`{nominal,risk-neutral,cvar-0.50,cvar-0.95}_control.png`.
 
 The corresponding **product state** $[B](t)$ — its ensemble mean
-$\mathbb{E}[B(t, \xi)]$ with a $\pm 3$ s.d. band, obtained by simulating each fixed
+$\mathbb{E}[B(t, \xi)]$ with a $\pm 3$ standard-deviation band, obtained by simulating each fixed
 control across the *same* $k_{20}$ ensemble (so even the nominal policy, whose own
 solve carries a single scenario, shows a meaningful spread) on a shared $y$-axis —
 makes the robustness ordering visible: the nominal control, tuned to $k_{20} = 1000$,
-spreads most through the tail-sensitive second half; risk-neutral is tighter; CVaR
-is tightest.
+spreads most through the tail-sensitive second half; risk-neutral is tighter, CVaR
+$\beta = 0.5$ tighter still, and CVaR $\beta = 0.95$ tightest.
 
-| nominal | risk-neutral | CVaR $\beta = 0.95$ |
-| --- | --- | --- |
-| ![nominal B](output/controls-state/nominal_states.png) | ![risk-neutral B](output/controls-state/risk-neutral_states.png) | ![CVaR B](output/controls-state/cvar-0.95_states.png) |
+| nominal | risk-neutral | CVaR $\beta = 0.5$ | CVaR $\beta = 0.95$ |
+| --- | --- | --- | --- |
+| ![nominal B](output/controls-state/nominal_states.png) | ![risk-neutral B](output/controls-state/risk-neutral_states.png) | ![CVaR 0.5 B](output/controls-state/cvar-0.50_states.png) | ![CVaR 0.95 B](output/controls-state/cvar-0.95_states.png) |
 
 ## The mean–tail trade-off out of sample
 
 The control is fixed before $k_{20}$ is known, so a good policy must hedge the
 whole distribution. **Per scenario**, the terminal yield as a function of $k_{20}$
 (the paper's Figure 2) shows the trade-off: the nominal policy peaks near
-$k_{20} = 1000$ but plunges in the tail; risk-neutral is flatter; CVaR is flattest.
+$k_{20} = 1000$ but plunges in the tail; risk-neutral is flatter, CVaR $\beta = 0.5$
+flatter still, and CVaR $\beta = 0.95$ is flattest.
 
 ![yield vs k20](output/yield_vs_k20.png)
 
 **Aggregated** over a large independent out-of-sample draw
 $k_{20} \sim \mathrm{TruncatedNormal}(1000, 500)$, the histogram of the terminal
-yield $[B]$ under each policy (solid vertical line = the mean $\mathbb{E}[B]$;
-dashed vertical line = the *worst-5% mean*) makes the ordering precise:
+yield $[B]$ under each policy (filled marker = the mean $\mathbb{E}[B]$; open marker
+= the *worst-5% mean*, both on the $x$-axis) makes the ordering precise:
 
 ![yield distribution](output/yield_distribution.png)
 
@@ -176,13 +171,18 @@ better worst case.
 | --- | ---: | ---: | ---: |
 | nominal | 0.3684 | 0.3210 | 0.3062 |
 | risk-neutral (robust) | **0.3689** | 0.3324 | 0.3211 |
+| CVaR, $\beta = 0.5$ | 0.3671 | 0.3429 | 0.3357 |
 | CVaR, $\beta = 0.95$ | 0.3620 | **0.3468** | **0.3425** |
 
 - **Risk-neutral beats nominal** on the *mean* yield ($0.3689 > 0.3684$): tuning to
   $k_{20} = 1000$ alone leaves expected yield on the table across the distribution.
-- **CVaR beats risk-neutral** on the *tail* (worst-5% mean $0.3468 > 0.3324$; worst
-  case $0.3425 > 0.3211$): it accepts a lower mean ($0.3620$) to lift the worst
-  outcomes — the risk-averse choice when a bad batch is costly.
+- **CVaR $\beta = 0.95$ beats risk-neutral** on the *tail* (worst-5% mean
+  $0.3468 > 0.3324$; worst case $0.3425 > 0.3211$): it accepts a lower mean
+  ($0.3620$) to lift the worst outcomes — the risk-averse choice when a bad batch is
+  costly.
+- **CVaR $\beta = 0.5$ is the intermediate dial setting**: it captures most of the
+  tail gain (worst-5% mean $0.3429$) for almost no loss of mean yield ($0.3671$),
+  interpolating between risk-neutral and $\beta = 0.95$.
 
 (The nominal yield at $k_{20} = 1000$ is $\approx 0.377$, matching the paper's
 Table 1 value $0.3773$.)

@@ -79,7 +79,7 @@ def make_ipopt_solve(model, tol=1e-8):
 
 # -- study parameters --------------------------------------------------------
 NS = (32, 64, 128)     # sample sizes for the statistic
-N_REF = 1024           # independent reference sample size (proxies J*)
+N_REF = 4096           # independent reference sample size (proxies J*)
 R = 200                # replicate SAA solves per sample size
 ROOT_SEED = 12345      # root entropy; independent child streams are spawned from it
 
