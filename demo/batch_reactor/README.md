@@ -16,7 +16,7 @@ The paper's three strategies map directly onto the sample average approximation
 | Paper | Here | Meaning |
 | --- | --- | --- |
 | nominal | **nominal** | solve at the mean $k_{20} = 1000$ |
-| robust (risk neutral) | **risk-neutral ** | optimize the *expected* yield over $k_{20}$ |
+| "robust" (risk neutral) | **risk-neutral** | optimize the *expected* yield over $k_{20}$ |
 | minimax (worst case) | **CVaR risk-averse** ($\beta = 0.5, 0.95$) | optimize the worst $(1-\beta)$ tail; two points on the risk dial, $\beta \to 1 \approx$ minimax |
 
 conditional value-at-risk (CVaR)
@@ -35,8 +35,8 @@ $$
 \dot{x}_2 = k_1 x_1^2 - \frac{1}{2} k_2 x_2 (1 - x_1 - 2 x_2),
 $$
 
-with Arrhenius rates $k_1 = k_{10} e^{-E_1/(R T)}$ and
-$k_2 = k_{20} e^{-E_2/(R T)}$.
+with Arrhenius rates $k_1 = k_{10} \mathrm{e}^{-E_1/(R T)}$ and
+$k_2 = k_{20} \mathrm{e}^{-E_2/(R T)}$.
 
 - **Initial state**: $x_1(0) = 1 - 2[C]_0 = 0.99$, $x_2(0) = 0$.
 - **Objective** (maximized): the final product $x_2(t_f)$ — coded as
@@ -45,11 +45,10 @@ $k_2 = k_{20} e^{-E_2/(R T)}$.
 - **Constants**: $R = 1.987$, $E_1 = 3\cdot10^3$, $E_2 = 4\cdot10^3$,
   $k_{10} = 100$, $[C]_0 = 5\cdot10^{-3}$.
 - **Uncertainty**: $k_{20} \sim \mathrm{TruncatedNormal}(1000, 500)$ on
-  $[500, 2000]$, drawn i.i.d. by Monte Carlo
-  (`ensemblecontrol.TruncatedNormalSampler`). The nominal problem fixes $k_{20}$ at
+  $[500, 2000]$, drawn i.i.d. by Monte Carlo sampling. The nominal problem fixes $k_{20}$ at
   its mean $\mathbb{E}[k_{20}] \approx 1000$.
 - **Discretization**: $q = 50$ control intervals (stair function,
-  $\Delta t = 0.02$), single shooting, RK4 (`steps_per_interval = 10`).
+  $\Delta t = 0.02$), single shooting, RK4.
 
 ## Requirements & how to run
 
@@ -100,11 +99,11 @@ fast decomposition). Writing the per-scenario loss $F_i = -x_2(t_f, \xi_i)$, the
 empirical CVaR of the loss $F$ has the Rockafellar–Uryasev variational form
 
 $$
-\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}\max\{0,F_i - t\} \},
+\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}\max\\{0,F_i - t\\} \},
 $$
 
 where $t$ is the Value-at-Risk
-level. Introducing one slack $s_i$ per scenario to lift each $\max\{0,F_i - t\}$ turns the
+level. Introducing one slack $s_i$ per scenario to lift each $\max\\{0,F_i - t\\}$ turns the
 SAA into a smooth joint minimization over the control $u$, the threshold $t$, and
 the slacks $s$ — a deterministic multi-scenario optimal control problem
 (implemented in [`risk_measures.py`](../../src/ensemblecontrol/risk_measures.py)):
@@ -134,7 +133,7 @@ Per-policy temperature profiles are in
 [output/controls-state/](output/controls-state/) as
 `{nominal,risk-neutral,cvar-0.50,cvar-0.95}_control.png`.
 
-The corresponding **product state** $[B](t)$ — its ensemble mean
+The corresponding **product state** $B(t)$ -- its ensemble mean
 $\mathbb{E}[B(t, \xi)]$ with a $\pm 3$ standard-deviation band, obtained by simulating each fixed
 control across the *same* $k_{20}$ ensemble (so even the nominal policy, whose own
 solve carries a single scenario, shows a meaningful spread) on a shared $y$-axis —
@@ -192,30 +191,19 @@ Table 1 value $0.3773$.)
 ## Statistical inference
 
 Only the **risk-neutral** SAA optimal value $\hat J_N^* = \mathbb{E}_N[-B]$ is
-analyzed (the nominal and CVaR policies are not swept), so the output folders and
-files are named `risk-neutral-*`. The value from a finite scenario sample is itself
-random; because `TruncatedNormalSampler` draws i.i.d. Monte-Carlo scenarios, the
-SAA is solved on nested prefixes $N \in \{32, 64, 128\}$ and reused as the anchor
-for every algorithm.
+analyzed (the nominal and CVaR policies are not swept). 
 
-**Plug-in CI** (Algorithm 1 — normal interval from the in-sample loss variance) and
-**subsampling CI** (Algorithm 2 — valid for nonunique optimizers, each subsample
-IPOPT-re-solved), $\hat J_N^*$ vs $N$ with the interval at 95%:
+**Plug-in CI**  and **subsampling CI** , $\hat J_N^*$ vs $N$ with the interval at 95%:
 
 | plug-in CI | subsampling CI |
 | --- | --- |
 | ![plug-in CI](output/risk-neutral-inference/risk-neutral_plugin_ci95.png) | ![subsampling CI](output/risk-neutral-inference/risk-neutral_subsampling_ci95.png) |
 
-Raw data and every figure (all timestamp-free) are under
-[output/risk-neutral-inference/](output/risk-neutral-inference/)
-(`risk-neutral_plugin_*`, `risk-neutral_plugin-oos_*`, `risk-neutral_subsampling_*`).
 
 **Central-limit-theorem study** ([clt_batch_reactor.py](clt_batch_reactor.py)) — the
 histograms of $\sqrt{N}(\hat J_N^* - \hat J_{\mathrm{ref}}^*)$ across
-$N \in \{32, 64, 128\}$ (each replicate IPOPT-solved and warm-started from an
-independent size-$N_{\mathrm{ref}}$ reference), which approach a centered Gaussian
-as $N$ grows; output under
-[output/risk-neutral-limit-theorem/](output/risk-neutral-limit-theorem/):
+$N \in \{32, 64, 128\}$, which approach a centered Gaussian
+as $N$ grows:
 
 ![CLT histograms](output/risk-neutral-limit-theorem/risk-neutral_clt_all.png)
 
