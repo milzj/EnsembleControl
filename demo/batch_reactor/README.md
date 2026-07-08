@@ -10,10 +10,8 @@ distribution of $k_{20}$ rather than at a single guessed value. This demo is bas
 > parametric uncertainty," *Chemical Engineering Communications* **131** (1995),
 > 33–52, https://doi.org/10.1080/00986449508936282
 
-using the sample-average-approximation (SAA) machinery of `ensemblecontrol` — the
-same `ControlProblem` / `SAAProblem` / IPOPT / `SolutionPlotter` tools as the
-[harmonic-oscillator demo](../harmonic_oscillator/). The paper's three strategies
-map directly onto the SAA risk settings:
+The paper's three strategies map directly onto the sample-average approximation
+(SAA) risk settings:
 
 | Paper | Here | Meaning |
 | --- | --- | --- |
@@ -31,12 +29,12 @@ With $x_1 = [A]$ and $x_2 = [B]$:
   $[A] + 2[B] + 2[C] = \text{const}$):
 
 $$
-\dot x_1 = -2\,k_1\,x_1^2, \qquad
-\dot x_2 = k_1\,x_1^2 - \tfrac12\,k_2\,x_2\,(1 - x_1 - 2 x_2),
+\dot{x}_1 = -2 k_1 x_1^2, \qquad
+\dot{x}_2 = k_1 x_1^2 - \frac{1}{2} k_2 x_2 (1 - x_1 - 2 x_2),
 $$
 
-with Arrhenius rates $k_1 = k_{10}\,e^{-E_1/(R T)}$ and
-$k_2 = k_{20}\,e^{-E_2/(R T)}$.
+with Arrhenius rates $k_1 = k_{10} e^{-E_1/(R T)}$ and
+$k_2 = k_{20} e^{-E_2/(R T)}$.
 
 - **Initial state**: $x_1(0) = 1 - 2[C]_0 = 0.99$, $x_2(0) = 0$.
 - **Objective** (maximized): the final product $x_2(t_f)$ — coded as
@@ -55,16 +53,20 @@ $k_2 = k_{20}\,e^{-E_2/(R T)}$.
 
 All commands below are run **from this demo folder** (`demo/batch_reactor/`).
 Create the project virtualenv once, **activate** it, and install `ensemblecontrol`
-(editable); then the drivers run with a plain `python` (`MPLBACKEND=Agg` renders
-figures headless):
+(editable); then the drivers run with a plain `python`:
 
 ```bash
 python3 -m venv ../../.venv
 source ../../.venv/bin/activate
 pip install -e ../..
-MPLBACKEND=Agg python saa_batch_reactor.py   # policies + control/state + yield + confidence intervals
-MPLBACKEND=Agg python clt_batch_reactor.py   # central-limit-theorem study
+python saa_batch_reactor.py   # policies + control/state + yield + confidence intervals
+python clt_batch_reactor.py   # central-limit-theorem study
 ```
+
+The drivers only ever `savefig` (they never call `plt.show()`), so any matplotlib
+backend works — `MPLBACKEND=Agg` is **not** required. On a headless machine, prefix
+the command with it to force the non-interactive backend, e.g.
+`MPLBACKEND=Agg python saa_batch_reactor.py`.
 
 `saa_batch_reactor.py` solves the nominal, risk-neutral, and CVaR ($\beta = 0.95$)
 policies with **IPOPT**; writes the control overlay and per-policy control/state
@@ -83,31 +85,43 @@ they differ only in how the uncertain terminal yield is scored.
 **Nominal** — maximize the yield at the mean parameter only:
 
 $$
-\max_T\; x_2(t_f, 1000).
+\max_T x_2(t_f, 1000).
 $$
 
 **Risk-neutral** (the paper's *robust* policy) — maximize the *expected* yield; the
 SAA replaces the expectation by the sample mean over $N$ i.i.d. scenarios:
 
 $$
-\max_T\; \mathbb{E}\!\left[x_2(t_f, \xi)\right]
-\;\approx\;
-\max_T\; \frac{1}{N}\sum_{i=1}^{N} x_2(t_f, \xi_i).
+\max_T \mathbb{E}[x_2(t_f, \xi)]
+\approx
+\max_T \frac{1}{N}\sum_{i=1}^{N} x_2(t_f, \xi_i).
 $$
 
 **CVaR risk-averse** — maximize the mean yield over the worst $(1 - \beta)$
 fraction of scenarios (the low-yield tail, which occurs at large $k_{20}$, i.e.
-fast decomposition). Writing the per-scenario loss $F_i = -x_2(t_f, \xi_i)$, CVaR
-uses the Rockafellar–Uryasev epigraph reformulation (implemented in
+fast decomposition). Writing the per-scenario loss $F_i = -x_2(t_f, \xi_i)$, the
+empirical CVaR of the loss $F$ has the Rockafellar–Uryasev variational form
+
+$$
+\mathrm{CVaR}_\beta(F) = \min_{t \in \mathbb{R}} \left\{ t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}(F_i - t)_+ \right\},
+\qquad (y)_+ = \max\{y, 0\},
+$$
+
+where $t$ is the Value-at-Risk level. Introducing one slack $s_i$ per scenario to
+lift each $(F_i - t)_+$ turns the SAA into a smooth joint minimization over the
+control $u$, the threshold $t$, and the slacks $s$ — a deterministic
+multi-scenario optimal control problem (implemented in
 [`risk_measures.py`](../../src/ensemblecontrol/risk_measures.py)):
 
 $$
-\mathrm{CVaR}_\beta \;=\; \min_t\;\Bigl\{\, t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N}(F_i - t)_+ \,\Bigr\},
+\begin{aligned}
+\min_{u, t, s} \quad & t + \frac{1}{(1-\beta)N}\sum_{i=1}^{N} s_i \\
+\text{s.t.} \quad & s_i \ge F_i - t, \quad s_i \ge 0, \quad i = 1, \ldots, N.
+\end{aligned}
 $$
 
-linearized with one slack per scenario ($r_i \ge 0$, $r_i \ge F_i - t$), so the SAA
-solves jointly for the control, the Value-at-Risk level $t$, and the slacks $r_i$.
-Here $\beta = 0.95$; $\beta \to 1$ approaches the paper's **minimax** (worst-case)
+The scenarios couple only through the shared control $u$ and threshold $t$. Here
+$\beta = 0.95$; $\beta \to 1$ approaches the paper's **minimax** (worst-case)
 policy.
 
 ## Control profiles
@@ -136,7 +150,7 @@ is tightest.
 | --- | --- | --- |
 | ![nominal B](output/controls-state/nominal_states.png) | ![risk-neutral B](output/controls-state/risk-neutral_states.png) | ![CVaR B](output/controls-state/cvar-0.95_states.png) |
 
-## Why the risk setting matters
+## The mean–tail trade-off out of sample
 
 The control is fixed before $k_{20}$ is known, so a good policy must hedge the
 whole distribution. **Per scenario**, the terminal yield as a function of $k_{20}$
