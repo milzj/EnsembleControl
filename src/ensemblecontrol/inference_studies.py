@@ -224,14 +224,19 @@ def clt_replication_study(sampler, solve, sample_sizes, R, n_ref,
                           warm_start=True, workers=1, progress=None):
     """Monte-Carlo replication study behind the SAA limit theorem.
 
-    For each N in ``sample_sizes`` solve ``R`` independent SAA problems (fresh
-    i.i.d. scenario draws) and record J_hat_N*; the statistic
-    ``sqrt(N)(J_hat_N* - J_hat_ref*)`` is formed at plot time. J* is proxied by
-    J_hat_ref*, the SAA value on an independent reference sample of size ``n_ref``.
+    For each N in ``sample_sizes`` record ``R`` replicate SAA optimal values J_hat_N*;
+    the statistic ``sqrt(N)(J_hat_N* - J_hat_ref*)`` is formed at plot time. J* is
+    proxied by J_hat_ref*, the SAA value on an independent reference sample of size
+    ``n_ref``.
 
-    ``sampler`` is any i.i.d. ensemblecontrol sampler (the ROOT, before spawning):
-    it is split into ``1 + len(sample_sizes)`` independent streams (reference plus
-    one group per N), and each group spawns ``R`` replicate streams.
+    The R replicates use COMMON RANDOM NUMBERS across N (the canonical SAA
+    construction): replicate ``r`` draws ``max(sample_sizes)`` scenarios once and its
+    size-N value uses the nested prefix ``samples[:N]`` -- so within a replicate the
+    size-32 problem is literally the first 32 scenarios of its size-64 problem.
+    Independent replicates draw independent sequences.
+
+    ``sampler`` is any i.i.d. ensemblecontrol sampler (the ROOT, before spawning): it
+    is split into ``1 + R`` independent streams -- one reference plus one per replicate.
     ``solve(samples, w0=None, inner_serial=False) -> (saa, w_opt, f_opt)`` solves
     one SAA (see :func:`make_scipy_solve`); with ``warm_start`` every replicate
     starts from the reference control ``w_ref``.
@@ -248,21 +253,24 @@ def clt_replication_study(sampler, solve, sample_sizes, R, n_ref,
     "n_ref": int, "q": int}`` -- pass straight to
     :func:`ensemblecontrol.save_clt_run` (``q = len(w_ref)`` = control-mesh size).
     """
-    sizes = list(sample_sizes)
-    ref_sampler, *group_samplers = sampler.spawn(1 + len(sizes))
+    sizes = sorted({int(n) for n in sample_sizes})
+    n_max = sizes[-1]
+    ref_sampler, *rep_samplers = sampler.spawn(1 + R)
 
     _, w_ref, f_ref = solve(ref_sampler.sample(n_ref))   # inner map threaded
     w_ref = np.asarray(w_ref, dtype=float)
     f_ref = float(f_ref)
     w0 = w_ref if warm_start else None
 
+    # Common random numbers across N: replicate r draws n_max scenarios ONCE (upfront,
+    # decoupled from the possibly-threaded solve order), and its size-N value uses the
+    # nested prefix full_samples[r][:N] -- the canonical SAA construction, so within a
+    # replicate the size-32 problem is the first 32 scenarios of its size-64 problem.
+    full_samples = [rep_samplers[r].sample(n_max) for r in range(R)]
+
     values_by_N = {}
-    for N, gss in zip(sizes, group_samplers):
-        rep_samplers = gss.spawn(R)
-        # Pre-sample all R scenario arrays sequentially: rep_samplers are already
-        # independent streams, so this is bit-identical to the sequential loop and
-        # decouples the draw from the (possibly threaded) solve order.
-        rep_samples = [rep_samplers[r].sample(N) for r in range(R)]
+    for N in sizes:
+        rep_samples = [full[:N] for full in full_samples]
         n_workers = _resolve_workers(workers, R, inner_work=N)
         inner_serial = n_workers > 1
         report = ((lambda done: progress(N, done, R)) if callable(progress)

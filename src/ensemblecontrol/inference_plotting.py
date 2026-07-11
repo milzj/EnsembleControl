@@ -175,27 +175,21 @@ def _draw_ci_hist(ax, N, F, ci, band_levels, loss_label):
     ax.set_title(r"$N = {}$".format(N))
 
 
-def _q_handle(q):
-    # Invisible legend entry annotating the control-mesh size q (= number of
-    # control intervals = len(control)), matching the demo's CI figures.
-    return mpatches.Patch(color="none", label=r"$(q = {})$".format(q))
-
-
-def _append_q(handles, q):
-    return handles if q is None else list(handles) + [_q_handle(q)]
-
-
-def _r_handle(r):
-    # Invisible legend entry annotating the scenario radius r (relative
-    # perturbation spread), matching the demo's control/state figures.
-    return mpatches.Patch(color="none", label=r"$(r = {})$".format(r))
-
-
 def _append_qr(handles, q, r):
-    # Append the q handle, then the r handle (each only when provided), so every
-    # inference figure carries the same (q, r) annotation as the control/state plots.
-    handles = _append_q(handles, q)
-    return handles if r is None else list(handles) + [_r_handle(r)]
+    # Append a SINGLE invisible legend entry carrying the (q, r) annotation on one
+    # line -- the same annotation the control/state plots use -- with q and r
+    # comma-separated. r is optional (some problems have no scenario radius, e.g.
+    # deterministic demos): emit whichever of q, r is provided, and nothing at all
+    # when both are None (so there is never a dangling comma or an empty "()").
+    parts = []
+    if q is not None:
+        parts.append("q = {}".format(q))
+    if r is not None:
+        parts.append("r = {}".format(r))
+    if not parts:
+        return handles
+    label = r"$({})$".format(", ".join(parts))
+    return list(handles) + [mpatches.Patch(color="none", label=label)]
 
 
 def _save_formats(fig, path, formats=("png",), **savefig_kw):
@@ -580,7 +574,7 @@ def _draw_clt_hist(ax, stat):
         xs = np.linspace(stat.min(), stat.max(), 200)
         ax.plot(xs, norm.pdf(xs, mu, sd), color="C0", lw=1.5)
     ax.axvline(0.0, color="k", lw=1.0, ls=":")
-    ax.set_xlabel(r"$N^{1/2}(\widehat J_N^* - \widehat J_{\mathrm{ref}}^*)$")
+    ax.set_xlabel(r"$N^{1/2}(\widehat J_N^* - \widehat{J}_{N_{\mathrm{ref}}}^*)$")
 
 
 def _shared_ticks(lo, hi):
@@ -696,3 +690,64 @@ def plot_clt(run_or_path, outdir=None, prefix="clt", stamp=None, q=None, r=None,
         print("[inference] wrote CLT figures to {}_clt_*".format(base))
         return saved
     return figs
+
+
+def plot_optimization_bias(run_or_path, outdir=None, stamp=None, formats=("png",)):
+    """Optimization-bias diagnostic from a CLT run (single panel).
+
+    Plots the main SAA optimal value -- the per-size mean ``E[Jhat_N*] +/- SE`` vs N --
+    together with the reference SAA optimal value ``Jhat_{N_ref}*`` (dashed line). By
+    Prop. 5.6 E[Jhat_N*] rises monotonically toward J* as N grows (optimistic bias for a
+    minimization), so the curve should climb toward the reference; the remaining gap is the
+    optimization bias.
+
+    ``run_or_path`` is a CLT run dict or a saved ``clt.json`` path.  Writes
+    ``optimization_bias[_<stamp>].{formats}`` to ``outdir`` (default: the JSON's directory).
+    Returns the list of written paths.
+    """
+    run = _as_clt_run(run_or_path)
+    if outdir is None:
+        outdir = os.path.dirname(run_or_path) if isinstance(run_or_path, str) else None
+    if outdir is None:
+        raise ValueError("outdir is required when run_or_path is not a path")
+
+    f_ref = float(run["f_ref"])
+    N_ref = int(run["N_ref"])
+    rows = sorted(run["results"], key=lambda rec: rec["N"])
+    N = np.array([rec["N"] for rec in rows], dtype=float)
+    vals = [np.asarray(rec["values"], dtype=float) for rec in rows]
+    mean = np.array([v.mean() for v in vals])
+    se = np.array([v.std(ddof=1) / np.sqrt(v.size) if v.size > 1 else 0.0
+                   for v in vals])
+
+    configure_style()
+    fig, ax = plt.subplots(figsize=(6.2, 4.4))
+    ax.errorbar(N, mean, yerr=se, fmt="o-", color="C0", capsize=3, zorder=3,
+                label=r"mean $\mathbb{E}[\widehat J_N^*] \pm$ standard error")
+    ax.axhline(f_ref, ls="--", color="tab:orange", lw=1.6, zorder=2,
+               label=r"reference $\widehat J^*_{N_{\mathrm{ref}}}$ "
+                     r"($N_{\mathrm{ref}}=%d$)" % N_ref)
+    ax.set_xscale("log", base=2)
+    ax.set_xticks(N)
+    ax.set_xticklabels([("%d" % n) for n in N])
+    ax.minorticks_off()
+    ax.set_xlabel(r"sample size $N$")
+    ax.set_ylabel(r"SAA optimal value $\widehat J_N^*$")
+
+    handles, labels = ax.get_legend_handles_labels()
+    for patch in _append_qr([], run.get("q"), run.get("r")):   # (q, r) annotation
+        handles.append(patch)
+        labels.append(patch.get_label())
+    ax.legend(handles, labels, loc="best", fontsize=9)
+    fig.tight_layout()
+
+    os.makedirs(outdir, exist_ok=True)
+    stem = "optimization_bias" if not stamp else "optimization_bias_%s" % stamp
+    base = os.path.join(outdir, stem)
+    written = []
+    for ext in formats:
+        p = "%s.%s" % (base, ext)
+        fig.savefig(p)
+        written.append(p)
+    plt.close(fig)
+    return written

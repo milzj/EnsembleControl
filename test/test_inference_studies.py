@@ -109,3 +109,36 @@ def test_clt_replication_study_with_real_solver_roundtrips(tmp_path):
         N_ref=study["n_ref"], f_ref=study["f_ref"], q=study["q"])
     run = ensemblecontrol.load_clt_run(path)
     assert [r["N"] for r in run["results"]] == [4, 6]
+
+
+def test_clt_replication_study_uses_common_random_numbers():
+    # Within each replicate the size-N samples must be the nested PREFIX of the
+    # size-max samples (common random numbers across N -- the canonical SAA
+    # construction). A recording fake solve captures the samples each solve receives.
+    seen = {}
+
+    def rec_solve(samples, w0=None, inner_serial=False):
+        s = np.asarray(samples, dtype=float)
+        seen.setdefault(s.shape[0], []).append(s.copy())
+        return None, np.zeros(3), float(s.sum())
+
+    sampler = ensemblecontrol.UniformSampler(0.0, 1.0, method="mc", seed=7)
+    ensemblecontrol.clt_replication_study(
+        sampler, rec_solve, sample_sizes=(6, 10), R=5, n_ref=8, workers=1)
+
+    for r in range(5):
+        # replicate r's size-6 problem is the first 6 scenarios of its size-10 problem
+        assert np.allclose(seen[6][r], seen[10][r][:6])
+    # independent replicates draw different sequences
+    assert not np.allclose(seen[10][0], seen[10][1])
+
+
+def test_plot_optimization_bias_smoke(tmp_path):
+    # single-panel bias diagnostic (mean E[Jhat_N*] + reference line) from a CLT run dict
+    run = {"N_ref": 64, "f_ref": -1.0, "q": 5, "r": 0.04,
+           "results": [{"N": 4, "values": np.array([-1.2, -1.1, -1.3])},
+                       {"N": 8, "values": np.array([-1.05, -1.0, -1.1])}]}
+    paths = ensemblecontrol.plot_optimization_bias(run, outdir=str(tmp_path),
+                                                   formats=("png",))
+    assert len(paths) == 1 and os.path.isfile(paths[0])
+    assert paths[0].endswith("optimization_bias.png")
