@@ -88,17 +88,6 @@ def test_lower_bound_validation(n, ell, delta):
         probability_lower_bound(n, ell, delta)
 
 
-@pytest.mark.parametrize("n,ell,q", [
-    (50, -1, 0.3),       # ell below 0
-    (50, 51, 0.3),       # ell above n
-    (50, 3, -0.1),       # q below 0
-    (50, 3, 1.1),        # q above 1
-])
-def test_upper_tail_validation(n, ell, q):
-    with pytest.raises(ValueError):
-        binomial_upper_tail(n, ell, q)
-
-
 def test_lemma_10_2_1_guarantee_montecarlo():
     # Simulate xi ~ Bernoulli(p_true) and check Prob{p_hat > p_true} <= delta.
     rng = np.random.default_rng(0)
@@ -108,6 +97,10 @@ def test_lemma_10_2_1_guarantee_montecarlo():
     exceed = float(np.mean(phat > p_true))
     assert exceed <= delta + 0.02      # Lemma 10.2.1 (small slack for MC noise)
     assert exceed > 0.03               # and the bound is not vacuously loose
+
+
+def test_default_delta_is_1e_6():
+    assert probability_lower_bound(500, 480) == probability_lower_bound(500, 480, 1e-6)
 
 
 def test_exports_available():

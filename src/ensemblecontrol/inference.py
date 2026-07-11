@@ -747,6 +747,14 @@ def _coverage_rows(run_or_path):
     return levels, rows
 
 
+def _delta_tex(d):
+    """LaTeX subscript for a delta value: a power of ten as 10^{k}, else decimal."""
+    e = round(float(np.log10(d)))
+    if np.isclose(d, 10.0 ** e):
+        return "10^{{{}}}".format(int(e))
+    return "{:g}".format(d)
+
+
 def coverage_latex_table(run_or_path, deltas=(0.05,), levels=None,
                          caption=None, label=None):
     """LaTeX (booktabs) table of the estimated coverage probabilities.
@@ -776,7 +784,7 @@ def coverage_latex_table(run_or_path, deltas=(0.05,), levels=None,
     sub = ["$N$"]
     for _ in levels:
         sub.append("$L/R$")
-        sub.extend("$\\underline{{p}}_{{{:g}}}$".format(d) for d in deltas)
+        sub.extend("$\\underline{{p}}_{{{}}}$".format(_delta_tex(d)) for d in deltas)
 
     body = []
     for N, indicators in rows:
@@ -810,7 +818,10 @@ def coverage_latex_table(run_or_path, deltas=(0.05,), levels=None,
 def _write_coverage_tables(json_path, data):
     base = os.path.splitext(json_path)[0]
     levels = data["levels"]
-    lines = ["Monte-Carlo coverage test of the plug-in confidence interval",
+    # Name the CI in the header from meta["ci"] when the caller recorded it.
+    ci = (data.get("meta") or {}).get("ci", "")
+    label = {"plugin": "plug-in", "subsampling": "subsampling"}.get(ci, ci or "SAA")
+    lines = ["Monte-Carlo coverage test of the %s confidence interval" % label,
              "coverage = (# CIs covering J_hat_ref*) / R",
              "p_lower  = (1-delta) lower bound on the true coverage (delta = 0.05)",
              "J_hat_ref* = {: .8e}  (N_ref = {})".format(data["f_ref"],

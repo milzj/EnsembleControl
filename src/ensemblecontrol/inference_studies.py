@@ -305,19 +305,28 @@ def coverage_study(sampler, solve, sample_sizes, R, n_ref,
                    workers=1, progress=None):
     """Monte-Carlo coverage test for the SAA confidence intervals.
 
-    For each N in ``sample_sizes`` run ``R`` independent replications: draw a
-    fresh i.i.d. sample of size N, solve the SAA, build a confidence interval, and
-    record whether it covers the reference value J_hat_ref* -- the population
-    optimal J*, proxied by the SAA value on one independent reference sample of
-    size ``n_ref`` (the same proxy across all N, since J* does not depend on the
-    training size).  The per-level coverage indicators are the raw Bernoulli data
-    behind :func:`ensemblecontrol.probability_lower_bound`; aggregate them with
+    For each N in ``sample_sizes`` run ``R`` replications: form a size-N sample,
+    solve the SAA, build a confidence interval, and record whether it covers the
+    reference value J_hat_ref* -- the population optimal J*, proxied by the SAA
+    value on one independent reference sample of size ``n_ref`` (the same proxy
+    across all N, since J* does not depend on the training size).  The per-level
+    coverage indicators are the raw Bernoulli data behind
+    :func:`ensemblecontrol.probability_lower_bound`; aggregate them with
     :func:`ensemblecontrol.coverage_from_indicators` /
     :func:`ensemblecontrol.coverage_latex_table`.
 
-    ``sampler`` is the ROOT i.i.d. sampler, split into ``1 + len(sample_sizes)``
-    independent streams (reference plus one group per N, each spawning ``R``
-    replicate streams).  ``solve(samples, w0=None, inner_serial=False) -> (saa,
+    The R replications use COMMON RANDOM NUMBERS across N (the canonical SAA
+    construction, as in :func:`clt_replication_study`): replicate ``r`` draws
+    ``max(sample_sizes)`` scenarios once and its size-N interval is built on the
+    nested prefix ``samples[:N]`` -- so within a replicate the size-32 problem is
+    literally the first 32 scenarios of its size-64 problem.  The reference stream
+    stays independent of every training sample: the CI must be tested against a J*
+    proxy independent of the data it is built from, or the coverage estimate is
+    biased -- only the training samples across N are nested, never the reference.
+
+    ``sampler`` is the ROOT i.i.d. sampler, split into ``1 + R`` independent
+    streams -- one reference plus one per replicate.
+    ``solve(samples, w0=None, inner_serial=False) -> (saa,
     w_opt, f_opt)`` solves one SAA (see :func:`make_scipy_solve` /
     :func:`make_ipopt_solve`); with ``warm_start`` every replicate starts from the
     reference control ``w_ref``.  ``ci_of(saa, w_opt, f_opt) -> ci`` builds the
@@ -342,9 +351,10 @@ def coverage_study(sampler, solve, sample_sizes, R, n_ref,
     {"lo": ndarray, "hi": ndarray}}}}`` -- pass straight to
     :func:`ensemblecontrol.save_coverage_run`.
     """
-    sizes = list(sample_sizes)
+    sizes = sorted({int(n) for n in sample_sizes})
+    n_max = sizes[-1]
     levels = tuple(levels)
-    ref_sampler, *group_samplers = sampler.spawn(1 + len(sizes))
+    ref_sampler, *rep_samplers = sampler.spawn(1 + R)
 
     _, w_ref, f_ref = solve(ref_sampler.sample(n_ref))   # inner map threaded
     w_ref = np.asarray(w_ref, dtype=float)
@@ -359,13 +369,17 @@ def coverage_study(sampler, solve, sample_sizes, R, n_ref,
                                                  levels=levels)
             return rec["ci"]
 
+    # Common random numbers across N: replicate r draws n_max scenarios ONCE (upfront,
+    # decoupled from the possibly-threaded solve order), and its size-N interval is
+    # built on the nested prefix full_samples[r][:N] -- so within a replicate the
+    # size-32 problem is the first 32 scenarios of its size-64 problem. The reference
+    # sample above is drawn from an independent stream (unbiased coverage target).
+    full_samples = [rep_samplers[r].sample(n_max) for r in range(R)]
+
     indicators_by_N = {}
     bounds_by_N = {}
-    for N, gss in zip(sizes, group_samplers):
-        rep_samplers = gss.spawn(R)
-        # Pre-sample sequentially (independent streams) so the indicators are
-        # bit-identical regardless of the (possibly threaded) solve order.
-        rep_samples = [rep_samplers[r].sample(N) for r in range(R)]
+    for N in sizes:
+        rep_samples = [full[:N] for full in full_samples]
         n_workers = _resolve_workers(workers, R, inner_work=N)
         inner_serial = n_workers > 1
         report = ((lambda done: progress(N, done, R)) if callable(progress)

@@ -81,6 +81,22 @@ def test_coverage_latex_table_content():
     assert "{:.3f}".format(bound) in tex
 
 
+@pytest.mark.parametrize("delta,sub", [
+    (1e-6, "10^{-6}"), (1e-5, "10^{-5}"), (1e-3, "10^{-3}"),
+    (0.1, "10^{-1}"), (0.05, "0.05"), (0.025, "0.025")])
+def test_coverage_latex_table_delta_subscript(delta, sub):
+    # powers of ten render as 10^{k} (any exponent); other deltas stay decimal
+    tex = coverage_latex_table(synthetic_study(), deltas=(delta,))
+    assert ("$\\underline{p}_{%s}$" % sub) in tex
+    assert "1e-0" not in tex          # never leak python's e-notation
+
+
+def test_coverage_latex_table_mixed_deltas_render_each():
+    tex = coverage_latex_table(synthetic_study(), deltas=(0.05, 1e-6))
+    assert "$\\underline{p}_{0.05}$" in tex
+    assert "$\\underline{p}_{10^{-6}}$" in tex
+
+
 def test_coverage_latex_table_multiple_deltas_adds_columns():
     one = coverage_latex_table(synthetic_study(), deltas=(0.05,))
     two = coverage_latex_table(synthetic_study(), deltas=(0.05, 0.1))
@@ -134,6 +150,31 @@ def test_coverage_study_workers_equivalence():
                                       base["indicators_by_N"][N][lvl])
 
 
+def test_coverage_study_uses_common_random_numbers():
+    # Within each replicate the size-N training sample must be the nested PREFIX of
+    # the size-max sample (common random numbers across N -- the canonical SAA
+    # construction). A recording fake solve captures the samples each solve receives.
+    seen = {}
+
+    def rec_solve(samples, w0=None, inner_serial=False):
+        s = np.asarray(samples, dtype=float)
+        seen.setdefault(s.shape[0], []).append(s.copy())
+        return None, np.zeros(3), float(s.sum())
+
+    root = ensemblecontrol.UniformSampler(0.0, 1.0, method="mc", seed=7)
+    coverage_study(root, rec_solve, sample_sizes=(6, 10), R=5, n_ref=8,
+                   levels=(0.90, 0.95), ci_of=fake_ci_of, workers=1)
+
+    for r in range(5):
+        # replicate r's size-6 problem is the first 6 scenarios of its size-10 problem
+        assert np.allclose(seen[6][r], seen[10][r][:6])
+    # independent replicates draw different sequences
+    assert not np.allclose(seen[10][0], seen[10][1])
+    # n_ref=8 differs from every training size -> the reference solve stays on its
+    # own key and is NOT one of the nested training samples (independent target)
+    assert len(seen[8]) == 1
+
+
 # -- coverage_study end-to-end with the real plug-in CI (tiny) ---------------
 
 def _double_integrator_solve():
@@ -173,3 +214,34 @@ def test_coverage_study_threaded_matches_sequential():
         for lvl in seq["levels"]:
             assert np.array_equal(seq["indicators_by_N"][N][lvl],
                                   par["indicators_by_N"][N][lvl])
+
+
+def _subsampling_ci_of(saa, w_opt, f_opt):
+    # Mirrors the demo's subsampling ci_of: a fresh rng per call keeps the m
+    # subsample index sets deterministic and thread-safe; workers=1 -> serial.
+    rng = np.random.default_rng(0)
+    rec = ensemblecontrol.subsampling_confidence_interval(
+        saa, f_opt, b=3, m=4, rng=rng, w_opt=w_opt,
+        levels=(0.90, 0.95, 0.99), workers=1)
+    return rec["ci"]
+
+
+def test_coverage_study_subsampling_ci_of_endtoend():
+    def run(workers):
+        solve = _double_integrator_solve()
+        sampler = ensemblecontrol.UniformSampler(0.0, 1.0, method="mc", seed=1)
+        return coverage_study(sampler, solve, sample_sizes=(6,), R=3, n_ref=8,
+                              ci_of=_subsampling_ci_of, workers=workers)
+
+    study = run(1)
+    for lvl in study["levels"]:
+        ind = study["indicators_by_N"][6][lvl]
+        assert ind.shape == (3,) and ind.dtype == bool
+    agg = coverage_from_indicators(study["indicators_by_N"][6], deltas=(0.05,))
+    for a in agg.values():
+        assert 0.0 <= a["coverage"] <= 1.0
+    # the subsampling ci_of (fresh rng per call) is thread-safe & reproducible
+    par = run(2)
+    for lvl in study["levels"]:
+        assert np.array_equal(study["indicators_by_N"][6][lvl],
+                              par["indicators_by_N"][6][lvl])
