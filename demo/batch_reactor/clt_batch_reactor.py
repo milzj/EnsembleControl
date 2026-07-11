@@ -9,9 +9,11 @@ where J_hat_N* = E_N[-B] is the risk-neutral SAA optimal value on N scenarios an
 J* is the population optimal value.  J* is not computable, so we proxy it by
 J_hat_ref*, the SAA value on an independent reference sample of size N_ref.
 
-For each N in {32, 64, 128} we solve R independent SAA problems (fresh i.i.d.
-scenario draws), record J_hat_N*, and histogram sqrt(N)*(J_hat_N* - J_hat_ref*).
-As N grows the histogram should look increasingly Gaussian.
+For each N in {32, 64, 128} we form R replicate SAA optimal values J_hat_N* and
+histogram sqrt(N)*(J_hat_N* - J_hat_ref*).  As N grows the histogram should look
+increasingly Gaussian.  The R replicates use COMMON RANDOM NUMBERS across N (the
+canonical SAA construction): each replicate draws max(N) scenarios once and its
+size-N value uses the first N.
 
 It uses IPOPT on the temperature box [340, 420] (single shooting) and warm-starts
 every replicate from the reference solution (projected strictly interior), so the
@@ -97,8 +99,9 @@ def main():
 
     model = BatchReactor()
     # Reproducible i.i.d. scenario root (k20 ~ truncnorm(1000, 500, [500, 2000]));
-    # clt_replication_study splits it into the reference stream plus one group per
-    # sample size (each spawning R replicate streams).
+    # clt_replication_study splits it into a reference stream plus R replicate
+    # streams (common random numbers: each replicate draws max(N) scenarios once,
+    # size-N uses the first N).
     root = ensemblecontrol.TruncatedNormalSampler(
         1000.0, 500.0, 500.0, 2000.0, method="mc", seed=ROOT_SEED)
     # IPOPT on the temperature box [340, 420] (single shooting); each replicate is

@@ -9,10 +9,11 @@ where J_hat_N* is the SAA optimal value on N scenarios and J* is the population
 optimal value.  J* is not computable, so we proxy it by J_hat_ref*, the SAA value
 on an independent reference sample of size N_ref.
 
-For each N in {32, 64, 128} we solve R independent SAA problems (fresh i.i.d.
-scenario draws), record J_hat_N*, and histogram the statistic
-sqrt(N)*(J_hat_N* - J_hat_ref*).  As N grows the histogram should look
-increasingly Gaussian.
+For each N in {32, 64, 128} we form R replicate SAA optimal values J_hat_N* and
+histogram the statistic sqrt(N)*(J_hat_N* - J_hat_ref*).  As N grows the
+histogram should look increasingly Gaussian.  The R replicates use COMMON RANDOM
+NUMBERS across N (the canonical SAA construction): each replicate draws max(N)
+scenarios once and its size-N value uses the first N.
 
 It uses IPOPT on the control box [-3,3] (single shooting) and warm-starts every
 replicate from the reference solution (projected strictly interior), so the many
@@ -88,8 +89,8 @@ def main():
 
     model = HarmonicOscillator()
     # Reproducible i.i.d. scenario root (k ~ U[0, 2*pi]); clt_replication_study
-    # splits it into the reference stream plus one group per sample size (each
-    # spawning R replicate streams).
+    # splits it into a reference stream plus R replicate streams (common random
+    # numbers: each replicate draws max(N) scenarios once, size-N uses the first N).
     root = ensemblecontrol.UniformSampler(0.0, 2.0 * np.pi, method="mc",
                                           seed=ROOT_SEED)
     # IPOPT on the control box [-3, 3] (single shooting); each replicate is

@@ -8,8 +8,10 @@ is meant to cover the population optimal value J* with its nominal probability
 1 - alpha.  J* is not computable, so we proxy it by J_hat_ref*, the SAA value on
 one large independent reference sample of size N_ref.
 
-For each N in {32, 64, 128} we run R independent replications (fresh i.i.d.
-scenario draws), build the CI on each, and count the L that cover J_hat_ref*.  The
+For each N in {32, 64, 128} we run R replications, build the CI on each, and count
+the L that cover J_hat_ref*.  The replications use COMMON RANDOM NUMBERS across N
+(each replicate draws max(N) scenarios once and its size-N CI uses the first N; the
+reference sample stays independent).  The
 empirical coverage is L/R; the estimator ``probability_lower_bound(R, L, delta)``
 upgrades it to a rigorous (1-delta) lower confidence bound on the true coverage
 (Clopper-Pearson; eq. 10.2.4 / Lemma 10.2.1).  This is the empirical
