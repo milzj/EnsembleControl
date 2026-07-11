@@ -117,6 +117,8 @@ def main():
         meta={"model": "HarmonicOscillator", "sampler": "UniformSampler",
               "k_distribution": "U[0, 2*pi]", "seed": ROOT_SEED})
     ensemblecontrol.plot_clt(path, outdir=run_dir, stamp="")   # from saved JSON
+    # optimization-bias diagnostic: mean SAA optimal value E[Jhat_N*] + reference
+    ensemblecontrol.plot_optimization_bias(path, outdir=run_dir)
 
 
 if __name__ == "__main__":
