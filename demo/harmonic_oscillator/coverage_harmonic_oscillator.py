@@ -139,7 +139,8 @@ def run_one(name, ci_of, R, solve, args, run_dir):
         study, os.path.join(run_dir, "coverage_%s.json" % name),
         meta={"model": "HarmonicOscillator", "ci": name,
               "sampler": "UniformSampler", "k_distribution": "U[0, 2*pi]",
-              "seed": ROOT_SEED})
+              "seed": ROOT_SEED},
+        delta=args.deltas[0])   # .txt summary uses the first delta (matches the .tex)
 
     caption = ("Estimated coverage of the %s for the SAA optimal value of the "
                "harmonic oscillator. For each training size $N$ and nominal level "
@@ -169,9 +170,10 @@ def main():
                     help="subsamples re-solved per subsampling replication")
     ap.add_argument("--n-ref", type=int, default=N_REF,
                     help="reference sample size (proxies J*)")
-    ap.add_argument("--deltas", default="0.05",
+    ap.add_argument("--deltas", default="1e-6",
                     help="comma-separated failure probabilities for the lower "
-                         "bound (delta=0.05 -> 95%%-confident lower bound)")
+                         "bound (delta=1e-6 -> (1 - 1e-6)-confident lower bound); "
+                         "the first value also sets the .txt summary's bound")
     ap.add_argument("--workers", default=str(_core_budget()),
                     help="outer parallelism over the R replicate solves per N: "
                          "default cpu-2 (= %d here) runs that many solves at once, "

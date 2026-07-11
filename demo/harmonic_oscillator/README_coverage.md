@@ -55,8 +55,8 @@ incomplete beta `I_q(L, R−L+1)`, so `p̂ = scipy.stats.beta.ppf(δ, L, R−L+1
     Prob{ p̂_{R,δ}(L) > p } ≤ δ,
 
 i.e. **with confidence `1−δ`, the true coverage `p` is at least `p̂_{R,δ}(L)`**.
-`δ` is the failure probability of *this bound* (default `δ=0.05` ⇒ a 95%-confident
-lower bound) — not the CI's own confidence level `1−α`.
+`δ` is the failure probability of *this bound* (demo default `δ=1e-6` ⇒ a
+`(1 − 1e-6)`-confident lower bound) — not the CI's own confidence level `1−α`.
 
 The gap between the point estimate `L/R` and the guaranteed bound `p̂` shrinks like
 `1/√R`, which is why the plug-in run uses `R=5000`: a large `R` makes the
@@ -121,7 +121,7 @@ Written to `output/coverage/`, with `<ci>` ∈ {`plugin`, `subsampling`}:
 |------|----------|
 | `coverage_<ci>.json` | **raw** per-`N` per-level coverage indicators + `f_ref`, `N_ref`, `levels`, `R` |
 | `coverage_<ci>.tex`  | the publication `booktabs` table (`\usepackage{booktabs}`) |
-| `coverage_<ci>.txt`  | a human-readable summary (`L/R` and the lower bound at `δ=0.05`) |
+| `coverage_<ci>.txt`  | a human-readable summary (`L/R` and the lower bound at `δ=1e-6`) |
 
 The JSON stores only the raw indicators; the empirical coverage and the lower
 bounds are recomputed from them at report time (`coverage_from_indicators`,

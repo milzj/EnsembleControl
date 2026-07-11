@@ -674,7 +674,8 @@ def coverage_from_indicators(indicators, deltas=(0.05,)):
     return out
 
 
-def save_coverage_run(study, path, meta=None, write_tables=True, r=None):
+def save_coverage_run(study, path, meta=None, write_tables=True, r=None,
+                      delta=1e-6):
     """Persist a coverage study (from :func:`coverage_study`) to ``path`` as JSON.
 
     Only the RAW per-N per-level coverage indicators and the run parameters
@@ -684,8 +685,8 @@ def save_coverage_run(study, path, meta=None, write_tables=True, r=None):
     :func:`coverage_from_indicators` / :func:`coverage_latex_table`), so the table
     can be re-derived without re-running the ~R*len(N) solves.  Indicators are
     stored as 0/1 columns aligned with ``levels`` (avoiding float JSON keys).
-    With ``write_tables`` also writes a human-readable ``.txt`` summary.  Returns
-    ``path``.
+    With ``write_tables`` also writes a human-readable ``.txt`` summary whose
+    lower confidence bound uses failure probability ``delta``.  Returns ``path``.
     """
     levels = list(study["levels"])
     ind_by_N = study["indicators_by_N"]
@@ -710,7 +711,7 @@ def save_coverage_run(study, path, meta=None, write_tables=True, r=None):
     }
     _write_json(path, data)
     if write_tables:
-        _write_coverage_tables(path, data)
+        _write_coverage_tables(path, data, delta=delta)
     return path
 
 
@@ -815,7 +816,7 @@ def coverage_latex_table(run_or_path, deltas=(0.05,), levels=None,
     return "\n".join(lines)
 
 
-def _write_coverage_tables(json_path, data):
+def _write_coverage_tables(json_path, data, delta=1e-6):
     base = os.path.splitext(json_path)[0]
     levels = data["levels"]
     # Name the CI in the header from meta["ci"] when the caller recorded it.
@@ -823,20 +824,21 @@ def _write_coverage_tables(json_path, data):
     label = {"plugin": "plug-in", "subsampling": "subsampling"}.get(ci, ci or "SAA")
     lines = ["Monte-Carlo coverage test of the %s confidence interval" % label,
              "coverage = (# CIs covering J_hat_ref*) / R",
-             "p_lower  = (1-delta) lower bound on the true coverage (delta = 0.05)",
+             "p_lower  = (1-delta) lower bound on the true coverage "
+             "(delta = {:g})".format(delta),
              "J_hat_ref* = {: .8e}  (N_ref = {})".format(data["f_ref"],
                                                          data["n_ref"]),
              "R = {} replications per N".format(data["R"]), ""]
     _, rows = _coverage_rows(data)
     for N, indicators in rows:
-        agg = coverage_from_indicators(indicators, deltas=(0.05,))
+        agg = coverage_from_indicators(indicators, deltas=(delta,))
         lines.append("N = {}".format(N))
         for level in levels:
             a = agg[level]
             lines.append("  level {:.2f}:  coverage = {}/{} = {:.4f}   "
                          "p_lower = {:.4f}".format(level, a["L"], a["R"],
                                                    a["coverage"],
-                                                   a["lower_bounds"][0.05]))
+                                                   a["lower_bounds"][delta]))
         lines.append("")
     with open(base + ".txt", "w") as fh:
         fh.write("\n".join(lines))

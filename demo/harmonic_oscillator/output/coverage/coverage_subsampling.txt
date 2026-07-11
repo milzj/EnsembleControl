@@ -1,0 +1,20 @@
+Monte-Carlo coverage test of the subsampling confidence interval
+coverage = (# CIs covering J_hat_ref*) / R
+p_lower  = (1-delta) lower bound on the true coverage (delta = 1e-06)
+J_hat_ref* =  8.54927653e-03  (N_ref = 4096)
+R = 200 replications per N
+
+N = 32
+  level 0.90:  coverage = 151/200 = 0.7550   p_lower = 0.5922
+  level 0.95:  coverage = 165/200 = 0.8250   p_lower = 0.6727
+  level 0.99:  coverage = 177/200 = 0.8850   p_lower = 0.7471
+
+N = 64
+  level 0.90:  coverage = 161/200 = 0.8050   p_lower = 0.6491
+  level 0.95:  coverage = 171/200 = 0.8550   p_lower = 0.7091
+  level 0.99:  coverage = 182/200 = 0.9100   p_lower = 0.7804
+
+N = 128
+  level 0.90:  coverage = 161/200 = 0.8050   p_lower = 0.6491
+  level 0.95:  coverage = 165/200 = 0.8250   p_lower = 0.6727
+  level 0.99:  coverage = 182/200 = 0.9100   p_lower = 0.7804
