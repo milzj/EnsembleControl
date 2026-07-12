@@ -1,0 +1,27 @@
+Plug-in confidence intervals for the SAA optimal value (Algorithm 1)
+standard deviation estimated OUT-OF-SAMPLE:
+sigma_oos^2 = (1/M) sum_j (F'_j - mean(F'))^2 at u_hat_N on M fresh scenarios
+
+N = 32  (M = 32)
+  J_hat_N*            = -3.69045709e-01
+  sigma_oos          =  1.66285930e-02
+  sigma/sqrt(N)       =  2.93954772e-03
+  90% CI: z = 1.644854  half-width =  4.835126e-03  [-3.73880835e-01, -3.64210583e-01]
+  95% CI: z = 1.959964  half-width =  5.761408e-03  [-3.74807117e-01, -3.63284301e-01]
+  99% CI: z = 2.575829  half-width =  7.571773e-03  [-3.76617482e-01, -3.61473936e-01]
+
+N = 64  (M = 64)
+  J_hat_N*            = -3.68849661e-01
+  sigma_oos          =  1.57257867e-02
+  sigma/sqrt(N)       =  1.96572333e-03
+  90% CI: z = 1.644854  half-width =  3.233327e-03  [-3.72082988e-01, -3.65616333e-01]
+  95% CI: z = 1.959964  half-width =  3.852747e-03  [-3.72702407e-01, -3.64996914e-01]
+  99% CI: z = 2.575829  half-width =  5.063368e-03  [-3.73913028e-01, -3.63786293e-01]
+
+N = 128  (M = 128)
+  J_hat_N*            = -3.67961804e-01
+  sigma_oos          =  1.52069490e-02
+  sigma/sqrt(N)       =  1.34411709e-03
+  90% CI: z = 1.644854  half-width =  2.210876e-03  [-3.70172680e-01, -3.65750928e-01]
+  95% CI: z = 1.959964  half-width =  2.634421e-03  [-3.70596225e-01, -3.65327383e-01]
+  99% CI: z = 2.575829  half-width =  3.462216e-03  [-3.71424020e-01, -3.64499588e-01]

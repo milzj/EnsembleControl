@@ -125,7 +125,7 @@ def plot_control(saa, w_opt, prefix, label):
     ax_c.set_ylim(T_LO, T_HI)
     ax_c.set_yticks(np.arange(T_LO, T_HI + 1.0, 20.0))
     ax_c.set_ylabel(r"$T$ [K]")
-    fig_c.savefig(os.path.join(CS_DIR, prefix + "_control.png"))
+    fig_c.savefig(os.path.join(CS_DIR, prefix + "_control.png"), bbox_inches="tight")
     plt.close(fig_c)
 
 
@@ -155,7 +155,7 @@ def plot_states_B(prefix, label, tgrid, mean, std, ylim, color="C1"):
     ax.set_ylabel(r"$[B]$")
     ax.grid(True)
     ax.legend()
-    fig.savefig(os.path.join(CS_DIR, prefix + "_states.png"))
+    fig.savefig(os.path.join(CS_DIR, prefix + "_states.png"), bbox_inches="tight")
     plt.close(fig)
 
 
@@ -175,7 +175,7 @@ def plot_all_controls(model, policies, savepath):
     ax.set_ylabel(r"$T$ [K]")
     ax.grid(True)
     ax.legend()
-    fig.savefig(savepath)
+    fig.savefig(savepath, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -204,7 +204,7 @@ def plot_yield_vs_k20(model, policies, savepath):
     ax.set_ylabel(r"$[B](t_f)$")
     ax.grid(True)
     ax.legend()
-    fig.savefig(savepath)
+    fig.savefig(savepath, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -258,7 +258,7 @@ def risk_illustration(model, policies, savepath, n_oos=2000, seed=7):
             label=r"worst-5\% mean")
     ax.grid(True)
     ax.legend()
-    fig.savefig(savepath)
+    fig.savefig(savepath, bbox_inches="tight")
     plt.close(fig)
 
 
