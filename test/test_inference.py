@@ -284,6 +284,21 @@ def test_resolve_workers_heuristic():
     assert _resolve_workers(1, 100, inner_work=999) == 1
 
 
+def test_public_lock_and_budget_aliases():
+    # `build_lock` / `core_budget` are the public spelling of the private
+    # `_BUILD_LOCK` / `_core_budget` that external callers (e.g. custom threaded
+    # resolvers) are directed to import; they must be the very same objects.
+    from ensemblecontrol import inference as inf
+
+    assert ensemblecontrol.build_lock is inf._BUILD_LOCK
+    assert ensemblecontrol.core_budget is inf._core_budget
+    assert inf.build_lock is inf._BUILD_LOCK
+    assert inf.core_budget is inf._core_budget
+    assert "build_lock" in inf.__all__ and "core_budget" in inf.__all__
+    n = ensemblecontrol.core_budget()
+    assert isinstance(n, int) and n >= 1
+
+
 def test_subsampling_workers_equivalence_and_ordering():
     # A deterministic resolver whose value depends on the drawn index set makes
     # the deltas nonconstant and order-sensitive, so any misalignment introduced

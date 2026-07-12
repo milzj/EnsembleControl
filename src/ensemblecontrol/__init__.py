@@ -21,7 +21,8 @@ from .inference import (terminal_losses, plugin_confidence_interval,
                         save_subsampling_run, load_subsampling_run,
                         clt_statistic, save_clt_run, load_clt_run,
                         coverage_from_indicators, save_coverage_run,
-                        load_coverage_run, coverage_latex_table)
+                        load_coverage_run, coverage_latex_table,
+                        build_lock, core_budget)
 from .probability_estimator import (probability_lower_bound,
                                     binomial_upper_tail)
 from .inference_plotting import (plot_plugin, plot_subsampling, plot_clt,

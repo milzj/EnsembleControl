@@ -42,6 +42,7 @@ __all__ = [
     "clt_statistic", "save_clt_run", "load_clt_run",
     "coverage_from_indicators", "save_coverage_run", "load_coverage_run",
     "coverage_latex_table",
+    "build_lock", "core_budget",
 ]
 
 
@@ -57,12 +58,23 @@ def _scalar(x):
 # the expensive solves run OUTSIDE the lock, so they still overlap.
 _BUILD_LOCK = threading.Lock()
 
+#: Public alias of the build lock.  Guard construction of CasADi objects in a
+#: custom threaded ``resolve``/``ci_of`` with this lock
+#: (``with ensemblecontrol.build_lock: ...``); the heavy solves run outside it.
+build_lock = _BUILD_LOCK
+
 
 # Reserve 2 cores for the OS / main thread: the outer solve loop uses at most
 # cpu_count - 2 threads (e.g. 8 on a 10-core machine), matching how the harness
 # and the CasADi maps leave headroom rather than pinning every core.
 def _core_budget():
     return max(1, (os.cpu_count() or 1) - 2)
+
+
+#: Public alias of the outer-parallelism core budget helper (``cpu_count - 2``,
+#: min 1): a sensible default for the ``workers`` argument of the threaded
+#: inference routines.
+core_budget = _core_budget
 
 
 def _resolve_workers(workers, njobs, inner_work):
@@ -295,7 +307,7 @@ def subsampling_confidence_interval(saa_problem, f_opt, b, m, rng, w_opt=None,
     cores). The ``m`` subsample index sets are drawn up front, so ``deltas`` is
     identical for any ``workers``. When threading a *custom* ``resolve`` that
     builds CasADi objects, serialize its construction with the module
-    :data:`_BUILD_LOCK` (the default resolver does) or run it at ``workers=1``.
+    :data:`build_lock` (the default resolver does) or run it at ``workers=1``.
 
     Returns a record ``{N, f_opt, b, m, deltas, levels, ci}`` where ``deltas`` is
     the raw statistic vector -- the data that gets persisted.

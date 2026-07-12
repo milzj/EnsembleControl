@@ -341,12 +341,12 @@ def coverage_study(sampler, solve, sample_sizes, R, n_ref,
     reference control ``w_ref``.  ``ci_of(saa, w_opt, f_opt) -> ci`` builds the
     interval; the default is the plug-in CI (:func:`plugin_confidence_interval`,
     one extra rollout -- no re-solve -- so the cost is exactly R+1 solves per N),
-    guarded by ``_BUILD_LOCK`` because building it constructs CasADi graphs.
+    guarded by ``build_lock`` because building it constructs CasADi graphs.
     ``ref_solve`` (default ``solve``) solves the single reference sample; pass a
     tighter-tolerance callback than the replicate ``solve`` so J_hat_ref* matches
     another study's reference exactly (e.g. the CLT study's J_hat_ref*).  A
     custom ``ci_of`` that builds CasADi objects must likewise guard construction
-    with ``_BUILD_LOCK`` (importable from :mod:`ensemblecontrol.inference`) and stay
+    with ``build_lock`` (importable as ``ensemblecontrol.build_lock``) and stay
     internally serial when ``workers > 1``; a subsampling ``ci_of`` would cost
     ``R*m`` solves per N.
 
