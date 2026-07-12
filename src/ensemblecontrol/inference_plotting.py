@@ -222,7 +222,7 @@ def _draw_ci_errorbar(ax, cis, level, value_label):
     Jhat = [ci["Jhat"] for ci in cis]
     hw = [ci["levels"][level]["halfwidth"] for ci in cis]
     ax.errorbar(Ns, Jhat, yerr=hw, fmt="o-", capsize=5, color="C0",
-                ecolor="C1", elinewidth=2)
+                ecolor="C1", elinewidth=2, label=r"$\widehat J_N^*$")
     ax.set_xscale("log", base=2)
     ax.set_xticks(Ns)
     ax.set_xticklabels([str(n) for n in Ns])
@@ -354,9 +354,10 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
         _draw_ci_errorbar(ax, cis, level, value_label)
         if value_ylim is not None:
             ax.set_ylim(*value_ylim)
+        handles, _ = ax.get_legend_handles_labels()   # the \widehat J_N^* series
         beta = mpatches.Patch(color="none",
                               label=r"$\beta = {:g}$".format(1.0 - level))
-        ax.legend(handles=_params([]) + [beta])
+        ax.legend(handles=_params(handles) + [beta])
         fig.tight_layout()
         if saving:
             p = "{}_ci{:.0f}.png".format(base, 100 * level)
