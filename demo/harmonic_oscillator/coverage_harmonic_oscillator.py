@@ -5,7 +5,7 @@ confidence intervals.
 For the harmonic oscillator of Melnikov & Milz (arXiv:2407.18182), with uncertain
 angular frequency k ~ U[0, 2*pi], a confidence interval for the SAA optimal value
 is meant to cover the population optimal value J* with its nominal probability
-1 - alpha.  J* is not computable, so we proxy it by J_hat_ref*, the SAA value on
+1 - beta.  J* is not computable, so we proxy it by J_hat_ref*, the SAA value on
 one large independent reference sample of size N_ref.
 
 For each N in {32, 64, 128} we run R replications, build the CI on each, and count
@@ -16,7 +16,7 @@ empirical coverage is L/R; the estimator ``probability_lower_bound(R, L, delta)`
 upgrades it to a rigorous (1-delta) lower confidence bound on the true coverage
 (Clopper-Pearson; eq. 10.2.4 / Lemma 10.2.1).  This is the empirical
 coverage-validation loop of Eichhorn & Roemisch (2007), Sec. 6, reporting the
-guaranteed lower bound rather than the raw ratio.  See README_coverage.md.
+guaranteed lower bound rather than the raw ratio.  See README.md (Coverage validation).
 
 Two confidence intervals are validated (choose with --ci):
   * plug-in (Algorithm 1): one extra rollout per replication, no re-solve, so the
@@ -52,10 +52,11 @@ from ensemblecontrol.inference import _BUILD_LOCK, _core_budget  # CasADi lock; 
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harmonic_oscillator import HarmonicOscillator  # noqa: E402
+from run_config import REF_SEED, N_REF, REF_TOL  # noqa: E402  shared reference config
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 COVERAGE_DIR = os.path.join(HERE, "output", "coverage")
-LEVELS = (0.90, 0.95, 0.99)     # nominal CI confidence levels 1 - alpha
+LEVELS = (0.90, 0.95, 0.99)     # nominal CI confidence levels 1 - beta
 
 # Human-readable labels for the LaTeX caption, keyed by the --ci name.
 CI_LABEL = {"plugin": "plug-in confidence interval (Algorithm 1)",
@@ -109,15 +110,16 @@ def make_subsampling_ci_of(m, levels, scipy_tol=1e-5, seed=0):
 
 
 # -- study parameters --------------------------------------------------------
+# N_REF, ROOT_SEED, and the reference tolerance REF_TOL come from run_config so this
+# study's reference J*_{N_ref} proxy is IDENTICAL to the CLT study's (see run_config).
 NS = (32, 64, 128)     # training sample sizes whose CI is validated
-N_REF = 4096           # independent reference sample size (proxies J*), kept large
 R_PLUGIN = 5000        # plug-in replications (1 solve each -> cheap)
 R_SUB = 200            # subsampling replications (m+1 solves each -> expensive)
 M_SUB = 200            # subsamples re-solved per subsampling replication
-ROOT_SEED = 12345      # root entropy; independent child streams are spawned from it
+ROOT_SEED = REF_SEED   # shared root entropy (run_config)
 
 
-def run_one(name, ci_of, R, solve, args, run_dir):
+def run_one(name, ci_of, R, solve, args, run_dir, ref_solve=None):
     # A fresh root sampler (same seed) per CI -> the reference value f_ref and the
     # replicate draws are identical across the two analyses, so plug-in and
     # subsampling coverage are a paired comparison on the same data.
@@ -130,7 +132,7 @@ def run_one(name, ci_of, R, solve, args, run_dir):
 
     study = ensemblecontrol.coverage_study(
         root, solve, sample_sizes=NS, R=R, n_ref=args.n_ref, levels=LEVELS,
-        ci_of=ci_of, workers=args.workers, progress=progress)
+        ci_of=ci_of, workers=args.workers, progress=progress, ref_solve=ref_solve)
 
     print("[%s] reference J_hat_ref* (N_ref=%d) = %.8f"
           % (name, study["n_ref"], study["f_ref"]))
@@ -143,11 +145,13 @@ def run_one(name, ci_of, R, solve, args, run_dir):
         delta=args.deltas[0])   # .txt summary uses the first delta (matches the .tex)
 
     caption = ("Estimated coverage of the %s for the SAA optimal value of the "
-               "harmonic oscillator. For each training size $N$ and nominal level "
-               "$1-\\alpha$, $L/R$ is the empirical coverage over $R=%d$ "
-               "replications and $\\underline{p}_{\\delta}$ is the $(1-\\delta)$ "
-               "lower confidence bound $\\hat p_{R,\\delta}(L)$."
-               % (CI_LABEL[name], study["R"]))
+               "harmonic oscillator. The population optimum is proxied by the SAA "
+               "optimal value on an independent reference sample of size "
+               "$N_{\\mathrm{ref}} = %d$. For each training size $N$ and nominal "
+               "level $1-\\beta$, $L/R$ is the empirical coverage over $R=%d$ "
+               "replications and $\\widehat p_{R,\\delta}(L)$ is the "
+               "$(1-\\delta)$ lower confidence bound on the true coverage."
+               % (CI_LABEL[name], study["n_ref"], study["R"]))
     tex = ensemblecontrol.coverage_latex_table(
         path, deltas=args.deltas, caption=caption, label="tab:coverage_%s" % name)
     with open(os.path.join(run_dir, "coverage_%s.tex" % name), "w") as fh:
@@ -193,12 +197,17 @@ def main():
     # tol=1e-5 is the *inference* tolerance: with thousands of small solves a tight
     # 1e-8 wastes ~3x the IPOPT iterations, and J_hat_N* shifts by ~1e-5 << CI width.
     solve = make_ipopt_solve(model, tol=1e-5)
+    # Reference J*_{N_ref} proxy is solved at the tight REF_TOL (run_config), not the
+    # fast 1e-5 used for the thousands of replicate solves, so J_hat_ref* matches the
+    # CLT study's reference exactly (identical seed, N_ref, tol, mesh).
+    ref_solve = make_ipopt_solve(model, tol=REF_TOL)
 
     if args.ci in ("plugin", "both"):
-        run_one("plugin", None, args.R, solve, args, run_dir)   # default = plug-in CI
+        run_one("plugin", None, args.R, solve, args, run_dir, ref_solve=ref_solve)
     if args.ci in ("subsampling", "both"):
         ci_of = make_subsampling_ci_of(args.m_sub, LEVELS)
-        run_one("subsampling", ci_of, args.R_sub, solve, args, run_dir)
+        run_one("subsampling", ci_of, args.R_sub, solve, args, run_dir,
+                ref_solve=ref_solve)
 
 
 if __name__ == "__main__":

@@ -110,12 +110,12 @@ def plot_solution(saa, w_opt, prefix, label=None):
     fig_c, ax_c = plotter.plot_controls(
         control_labels=[r"$u_1^*(t)$", r"$u_2^*(t)$"], label_prefix=label)
     ax_c.set_ylim(-3.0, 3.0)   # frame the controls against their [-3, 3] box
-    fig_c.savefig(os.path.join(CS_DIR, prefix + "_controls.png"))
+    fig_c.savefig(os.path.join(CS_DIR, prefix + "_controls.png"), bbox_inches="tight")
     fig_s, _ = plotter.plot_states(
         state_labels=[r"$\mathbb{E}[x_1^*(t,\xi)]$",
                       r"$\mathbb{E}[x_2^*(t,\xi)]$"],
         label_prefix=label)
-    fig_s.savefig(os.path.join(CS_DIR, prefix + "_states.png"))
+    fig_s.savefig(os.path.join(CS_DIR, prefix + "_states.png"), bbox_inches="tight")
     plt.close("all")
 
 
@@ -125,7 +125,7 @@ def main():
                         default="both", help="which CI algorithm(s) to run")
     parser.add_argument("--m", type=int, default=None,
                         help="number of subsamples (Algorithm 2); "
-                             "default 5*max(N), constant across the sweep")
+                             "default 5N per N (growing across the sweep)")
     parser.add_argument("--b", type=int, default=None,
                         help="subsample size (Algorithm 2); default "
                              "floor(N^(6/7)) per sample size; must be < N")
@@ -208,13 +208,12 @@ def main():
     if run_sub:
         # subsampling at each sample size N -- the analogue of the plug-in sweep.
         # Default block size b = floor(N^{6/7}) PER N (grows with N, b/N -> 0);
-        # m = 5*max(N) subsamples, constant. --b/--m override with fixed values.
+        # m_N = 5N subsamples PER N (growing). --b/--m override with fixed values.
         # The per-N spawned index streams and the b-validation live in
         # subsampling_sweep; --workers threads the m IPOPT re-solves within each N.
         b_of = ((lambda N: args.b) if args.b is not None
                 else ensemblecontrol.default_subsample_size)
-        m = (args.m if args.m is not None
-             else ensemblecontrol.default_num_subsamples(SAMPLE_SIZES[-1]))
+        m = args.m   # None -> per-N default m_N = 5N; an int overrides with a constant
         try:
             sub_records = ensemblecontrol.subsampling_sweep(
                 solves, SAMPLE_SIZES, b_of=b_of, m=m, seed=SUB_SEED,

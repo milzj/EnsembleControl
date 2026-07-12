@@ -38,6 +38,7 @@ from ensemblecontrol.inference import _BUILD_LOCK   # serialize CasADi construct
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harmonic_oscillator import HarmonicOscillator
+from run_config import REF_SEED, N_REF, REF_TOL   # shared reference J*_{N_ref} config
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CLT_DIR = os.path.join(HERE, "output", "limit_theorem")
@@ -69,10 +70,11 @@ def make_ipopt_solve(model, tol=1e-8):
     return solve
 
 # -- study parameters --------------------------------------------------------
+# N_REF, ROOT_SEED, and the reference tolerance come from run_config so the CLT and
+# coverage studies share the identical reference J*_{N_ref} proxy (see run_config).
 NS = (32, 64, 128)     # sample sizes for the statistic
-N_REF = 1024           # independent reference sample size (proxies J*)
 R = 200                # replicate SAA solves per sample size
-ROOT_SEED = 12345      # root entropy; independent child streams are spawned from it
+ROOT_SEED = REF_SEED   # shared root entropy (run_config)
 
 
 def main():
@@ -95,7 +97,8 @@ def main():
                                           seed=ROOT_SEED)
     # IPOPT on the control box [-3, 3] (single shooting); each replicate is
     # warm-started (strictly interior) from the reference solution inside the study.
-    solve = make_ipopt_solve(model, tol=1e-8)
+    # REF_TOL (run_config) is the shared reference/solve tolerance.
+    solve = make_ipopt_solve(model, tol=REF_TOL)
 
     def progress(N, done, total):
         if done % 50 == 0 or done == total:
