@@ -25,13 +25,15 @@ from .inference import (terminal_losses, plugin_confidence_interval,
 from .probability_estimator import (probability_lower_bound,
                                     binomial_upper_tail)
 from .inference_plotting import (plot_plugin, plot_subsampling, plot_clt,
-                                 plot_optimization_bias, value_ylim_across)
+                                 plot_optimization_bias, plot_monotonicity,
+                                 value_ylim_across)
 from .inference_studies import (make_scipy_solve, make_ipopt_solve,
                                 default_subsample_size,
                                 default_num_subsamples, solve_saa_prefixes,
                                 plugin_sweep, plugin_oos_sweep,
                                 subsampling_sweep, clt_replication_study,
-                                coverage_study)
+                                coverage_study, monotonicity_check,
+                                format_monotonicity_table)
 from .mean_saa_optimal_value import (optimal_value_study, mean_value_series,
                                      save_optimal_value_run, load_optimal_value_run,
                                      plot_optimal_value)

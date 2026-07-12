@@ -776,7 +776,7 @@ def coverage_latex_table(run_or_path, deltas=(0.05,), levels=None,
     group = [""]
     cmid, start = [], 2
     for level in levels:
-        group.append("\\multicolumn{{{}}}{{c}}{{$1-\\alpha = {:.2f}$}}".format(
+        group.append("\\multicolumn{{{}}}{{c}}{{$1-\\beta = {:.2f}$}}".format(
             per_level, level))
         end = start + per_level - 1
         cmid.append("\\cmidrule(lr){{{}-{}}}".format(start, end))
@@ -785,7 +785,7 @@ def coverage_latex_table(run_or_path, deltas=(0.05,), levels=None,
     sub = ["$N$"]
     for _ in levels:
         sub.append("$L/R$")
-        sub.extend("$\\underline{{p}}_{{{}}}$".format(_delta_tex(d)) for d in deltas)
+        sub.extend("$\\widehat{{p}}_{{R,{}}}(L)$".format(_delta_tex(d)) for d in deltas)
 
     body = []
     for N, indicators in rows:

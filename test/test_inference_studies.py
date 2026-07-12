@@ -64,6 +64,20 @@ def test_subsampling_sweep_rejects_bad_block_size():
         raise AssertionError("expected ValueError for b >= N")
 
 
+def test_subsampling_sweep_default_m_is_5N_per_size():
+    # New default: m_N = 5N per sample size (was constant m = 5*max(N)).
+    model = DoubleIntegrator()
+    solve = ensemblecontrol.make_scipy_solve(model, tol=1e-6)
+    solves = ensemblecontrol.solve_saa_prefixes(solve, [[0]] * 16, (8, 16))
+    recs = ensemblecontrol.subsampling_sweep(solves, (8, 16), seed=3, workers=1)
+    assert [r["m"] for r in recs] == [40, 80]          # 5*8, 5*16 (not 80, 80)
+    # a callable m schedule is honored per N; a scalar stays constant across N
+    cb = ensemblecontrol.subsampling_sweep(solves, (8, 16), m=lambda N: N, seed=3)
+    assert [r["m"] for r in cb] == [8, 16]
+    const = ensemblecontrol.subsampling_sweep(solves, (8, 16), m=7, seed=3)
+    assert [r["m"] for r in const] == [7, 7]
+
+
 # -- CLT replication study ----------------------------------------------------
 
 def test_clt_replication_study_workers_equivalence():
@@ -142,3 +156,68 @@ def test_plot_optimization_bias_smoke(tmp_path):
                                                    formats=("png",))
     assert len(paths) == 1 and os.path.isfile(paths[0])
     assert paths[0].endswith("optimization_bias.png")
+
+
+# -- monotonicity diagnostic --------------------------------------------------
+
+def test_monotonicity_check():
+    R = 400
+    alt = np.empty(R)                 # zero-mean, unit-std pattern (200x +1, 200x -1)
+    alt[0::2], alt[1::2] = 1.0, -1.0
+    base = np.linspace(-1.0, 1.0, R)  # arbitrary shared (nested/CRN) component
+    # Paired differences are constructed directly so each pair lands robustly in one
+    # bucket: (8->16) delta=+0.5 -> OK; (16->32) delta=-0.1 with se~0.10 -> z~-1
+    # (compatible with MC noise); (32->64) delta=-0.5 with se~5e-5 -> z~-1e4 (violation).
+    v8 = base - 0.5
+    v16 = base
+    v32 = base + (-0.1 + 2.0 * alt)
+    v64 = v32 + (-0.5 + 0.001 * alt)
+    values = {8: v8, 16: v16, 32: v32, 64: v64}
+
+    rows = ensemblecontrol.monotonicity_check(values, nested=True)
+    assert [(r["N1"], r["N2"]) for r in rows] == [(8, 16), (16, 32), (32, 64)]
+    by_pair = {(r["N1"], r["N2"]): r for r in rows}
+    assert by_pair[(8, 16)]["status"] == "OK"                 # delta > 0
+    assert by_pair[(16, 32)]["status"] == "compatible with MC noise"
+    assert by_pair[(32, 64)]["status"] == "potential issue"   # z < -2
+
+    # nested se is exactly std(v2 - v1, ddof=1)/sqrt(R)
+    r = by_pair[(16, 32)]
+    D = v32 - v16
+    assert np.isclose(r["se"], D.std(ddof=1) / np.sqrt(R))
+    assert np.isclose(r["z"], r["delta"] / r["se"])
+
+    # non-nested se is the independent combination sqrt(se1^2 + se2^2), and (because the
+    # columns are positively correlated here) differs from the paired se.
+    unp = {(x["N1"], x["N2"]): x
+           for x in ensemblecontrol.monotonicity_check(values, nested=False)}
+    se1 = v16.std(ddof=1) / np.sqrt(R)
+    se2 = v32.std(ddof=1) / np.sqrt(R)
+    assert np.isclose(unp[(16, 32)]["se"], np.hypot(se1, se2))
+    assert not np.isclose(unp[(16, 32)]["se"], r["se"])
+
+    # nested=True with unequal R is rejected
+    try:
+        ensemblecontrol.monotonicity_check({8: np.zeros(5), 16: np.zeros(6)},
+                                           nested=True)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for unequal R under nested=True")
+
+    # formatter renders one line per pair with the status text
+    table = ensemblecontrol.format_monotonicity_table(rows)
+    assert "status" in table and "potential issue" in table
+    assert len(table.splitlines()) == 2 + len(rows)   # header + rule + rows
+
+
+def test_plot_monotonicity_smoke(tmp_path):
+    # renders from a loaded-run-style dict (has "results")
+    run = {"q": 5, "r": 0.04,
+           "results": [{"N": 8, "values": np.array([-1.2, -1.1, -1.3, -1.15])},
+                       {"N": 16, "values": np.array([-1.05, -1.0, -1.1, -1.02])},
+                       {"N": 32, "values": np.array([-1.06, -1.01, -1.11, -1.03])}]}
+    paths = ensemblecontrol.plot_monotonicity(run, outdir=str(tmp_path),
+                                              formats=("png",))
+    assert len(paths) == 1 and os.path.isfile(paths[0])
+    assert paths[0].endswith("monotonicity.png")

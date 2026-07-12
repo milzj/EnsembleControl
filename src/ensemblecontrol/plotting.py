@@ -174,7 +174,7 @@ class SolutionPlotter(object):
         return (fig_states, ax_states), (fig_controls, ax_controls)
 
     def save(self, fig, path):
-        fig.savefig(path)
+        fig.savefig(path, bbox_inches="tight")
 
     # -- helpers --------------------------------------------------------------
 
@@ -224,12 +224,12 @@ class SolutionPlotter(object):
         # Preserve byte-for-byte legacy behavior for the default single-PNG case;
         # for multiple formats, swap the extension per format.
         if tuple(formats) == ("png",):
-            fig.savefig(path)
+            fig.savefig(path, bbox_inches="tight")
             return
         root, dot, _ext = path.rpartition(".")
         base = root if dot else path
         for fmt in formats:
-            fig.savefig("{}.{}".format(base, fmt))
+            fig.savefig("{}.{}".format(base, fmt), bbox_inches="tight")
 
     def _expand_savepath(self, savepath, label):
         if "{}" in savepath:

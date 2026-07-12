@@ -30,7 +30,7 @@ from .inference import (plugin_ci_from_losses, plugin_oos_ci_from_losses,
                         clt_statistic, load_clt_run)
 
 __all__ = ["plot_plugin", "plot_subsampling", "plot_clt", "configure_style",
-           "value_ylim_across"]
+           "value_ylim_across", "plot_optimization_bias", "plot_monotonicity"]
 
 # Confidence levels drawn widest-first so the narrower (higher-opacity) bands sit
 # on top; the increasing alpha makes the nesting 99 > 95 > 90 read directly.
@@ -228,7 +228,6 @@ def _draw_ci_errorbar(ax, cis, level, value_label):
     ax.set_xticklabels([str(n) for n in Ns])
     ax.set_xlabel(r"$N$")
     ax.set_ylabel(value_label)
-    ax.set_title("{} confidence interval".format(_pct(level)))
     ax.grid(True, which="both", alpha=0.3)
 
 
@@ -355,9 +354,9 @@ def plot_plugin(run_or_path, outdir=None, prefix="plugin", stamp=None,
         _draw_ci_errorbar(ax, cis, level, value_label)
         if value_ylim is not None:
             ax.set_ylim(*value_ylim)
-        extra = _params([])
-        if extra:
-            ax.legend(handles=extra)
+        beta = mpatches.Patch(color="none",
+                              label=r"$\beta = {:g}$".format(1.0 - level))
+        ax.legend(handles=_params([]) + [beta])
         fig.tight_layout()
         if saving:
             p = "{}_ci{:.0f}.png".format(base, 100 * level)
@@ -455,7 +454,6 @@ def _draw_subsampling_ci_sweep(ax, cis, level, value_label):
     ax.set_xticklabels([str(n) for n in Ns])
     ax.set_xlabel(r"$N$")
     ax.set_ylabel(value_label)
-    ax.set_title("{} subsampling confidence interval".format(_pct(level)))
     ax.grid(True, which="both", alpha=0.3)
 
 
@@ -530,7 +528,9 @@ def plot_subsampling(run_or_path, outdir=None, prefix="subsampling", stamp=None,
         if value_ylim is not None:
             ax.set_ylim(*value_ylim)
         handles, _ = ax.get_legend_handles_labels()
-        ax.legend(handles=handles + bmq)
+        beta = mpatches.Patch(color="none",
+                              label=r"$\beta = {:g}$".format(1.0 - level))
+        ax.legend(handles=handles + bmq + [beta])
         fig.tight_layout()
         if saving:
             p = "{}_ci{:.0f}.png".format(base, 100 * level)
@@ -743,6 +743,87 @@ def plot_optimization_bias(run_or_path, outdir=None, stamp=None, formats=("png",
 
     os.makedirs(outdir, exist_ok=True)
     stem = "optimization_bias" if not stamp else "optimization_bias_%s" % stamp
+    base = os.path.join(outdir, stem)
+    written = []
+    for ext in formats:
+        p = "%s.%s" % (base, ext)
+        fig.savefig(p)
+        written.append(p)
+    plt.close(fig)
+    return written
+
+
+def plot_monotonicity(run_or_path, outdir=None, stamp=None, formats=("png",),
+                      nested=True):
+    """Adjacent-difference monotonicity diagnostic for the SAA optimal-value means.
+
+    Plots each gap ``Delta_{N1,N2} = mhat_N2 - mhat_N1`` with +/- 2*se(Delta) error bars
+    and a zero reference line, one marker per adjacent sample-size pair, colored by the
+    :func:`ensemblecontrol.monotonicity_check` status (green "OK" / orange "compatible with
+    MC noise" / red "potential issue").  A marker whose whole +/-2*se bar sits below zero is
+    a flagged violation (z < -2); a negative marker whose bar still reaches zero is harmless
+    finite-R noise.  Each point is annotated with its z-score.  The aim is to read off
+    whether any dip in the mean curve is large enough to matter -- not to force monotonicity.
+
+    ``run_or_path`` is a study/loaded run dict, a plain ``{N: values}`` mapping, or a path to
+    a saved JSON (mean_saa or clt).  ``nested`` selects the paired (default, for the CRN
+    studies) vs independent standard error, matching :func:`ensemblecontrol.monotonicity_check`.
+    Writes ``monotonicity[_<stamp>].{formats}`` to ``outdir`` (default: the JSON's directory).
+    Returns the list of written paths.
+    """
+    import json
+    from .inference_studies import monotonicity_check
+
+    if isinstance(run_or_path, str):
+        with open(run_or_path) as fh:
+            run = json.load(fh)
+        if outdir is None:
+            outdir = os.path.dirname(run_or_path)
+    else:
+        run = run_or_path
+    if outdir is None:
+        raise ValueError("outdir is required when run_or_path is not a path")
+
+    rows = monotonicity_check(run, nested=nested)
+    if not rows:
+        raise ValueError("need at least two sample sizes for a monotonicity plot")
+
+    colors = {"OK": "tab:green",
+              "compatible with MC noise": "tab:orange",
+              "potential issue": "tab:red"}
+    x = np.arange(len(rows))
+    delta = np.array([r["delta"] for r in rows])
+    two_se = np.array([2.0 * r["se"] for r in rows])
+    labels = [r"%d$\to$%d" % (r["N1"], r["N2"]) for r in rows]
+
+    configure_style()
+    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+    ax.axhline(0.0, ls="--", color="0.4", lw=1.4, zorder=1)
+    ax.errorbar(x, delta, yerr=two_se, fmt="none", ecolor="0.5", capsize=4, zorder=2)
+    for xi, di, rec in zip(x, delta, rows):
+        ax.plot(xi, di, "o", color=colors[rec["status"]], ms=8, zorder=3)
+        ax.annotate("z=%.2f" % rec["z"], (xi, di), textcoords="offset points",
+                    xytext=(0, 9), ha="center", fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_xlim(-0.5, len(rows) - 0.5)
+    ax.set_xlabel(r"adjacent sample-size pair $(N_1 \to N_2)$")
+    ax.set_ylabel(r"$\widehat\Delta_{N_1,N_2} = \widehat m_{N_2} - \widehat m_{N_1}$"
+                  r"  ($\pm\,2\,$se)")
+
+    # legend: only the statuses that actually occur, plus the monotone boundary
+    present = [s for s in ("OK", "compatible with MC noise", "potential issue")
+               if any(rec["status"] == s for rec in rows)]
+    handles = [mlines.Line2D([], [], color=colors[s], marker="o", ls="none", label=s)
+               for s in present]
+    handles.append(mlines.Line2D([], [], color="0.4", ls="--",
+                                 label=r"monotone boundary $\Delta = 0$"))
+    handles += _append_qr([], run.get("q"), run.get("r"))   # (q, r) annotation
+    ax.legend(handles=handles, loc="best", fontsize=8)
+    fig.tight_layout()
+
+    os.makedirs(outdir, exist_ok=True)
+    stem = "monotonicity" if not stamp else "monotonicity_%s" % stamp
     base = os.path.join(outdir, stem)
     written = []
     for ext in formats:

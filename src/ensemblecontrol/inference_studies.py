@@ -41,6 +41,7 @@ __all__ = [
     "default_subsample_size", "default_num_subsamples",
     "solve_saa_prefixes", "plugin_sweep", "plugin_oos_sweep",
     "subsampling_sweep", "clt_replication_study", "coverage_study",
+    "monotonicity_check", "format_monotonicity_table",
 ]
 
 
@@ -138,9 +139,9 @@ def default_subsample_size(N):
     return int(np.floor(N ** (6.0 / 7.0) + 1e-9))
 
 
-def default_num_subsamples(Nmax):
-    """Default subsample count ``m = 5*Nmax``, held constant across the sweep."""
-    return 5 * int(Nmax)
+def default_num_subsamples(N):
+    """Default per-N subsample count ``m_N = 5N`` (grows with the sample size)."""
+    return 5 * int(N)
 
 
 # -- sample-size sweep --------------------------------------------------------
@@ -187,8 +188,10 @@ def subsampling_sweep(solves, sample_sizes, b_of=default_subsample_size,
                       resolve_for=None, progress=False):
     """Subsampling CI records (Algorithm 2) across the sample-size sweep.
 
-    ``b_of(N) -> int`` is the per-N block size (default ``floor(N^{6/7})``); ``m``
-    defaults to ``default_num_subsamples(max(sample_sizes))``. Independent
+    ``b_of(N) -> int`` is the per-N block size (default ``floor(N^{6/7})``). ``m`` is
+    the subsample count -- a per-N callable ``m_of(N) -> int`` or a scalar (constant
+    across the sweep); it defaults to the per-N rule ``m_N = 5N``
+    (:func:`default_num_subsamples`). Independent
     subsample-index streams are spawned per N from ``seed`` (numpy
     ``SeedSequence`` splitting), so the sweep is reproducible. ``workers`` is
     forwarded to each :func:`subsampling_confidence_interval` -- the parallelism
@@ -199,8 +202,14 @@ def subsampling_sweep(solves, sample_sizes, b_of=default_subsample_size,
     :func:`ensemblecontrol.save_subsampling_run`.
     """
     sizes = list(sample_sizes)
+    # m: a per-N callable m_of(N) -> int, or a scalar (constant across the sweep).
+    # Default (m is None) is the per-N rule m_N = 5N (default_num_subsamples).
     if m is None:
-        m = default_num_subsamples(max(sizes))
+        m_of = default_num_subsamples
+    elif callable(m):
+        m_of = m
+    else:
+        m_of = lambda N: m
     for N in sizes:                       # fail fast before any solve
         b = b_of(N)
         if not (0 < b < N):
@@ -212,7 +221,7 @@ def subsampling_sweep(solves, sample_sizes, b_of=default_subsample_size,
         saa, w_opt, f_opt = solves[N]
         resolve = None if resolve_for is None else resolve_for(N, saa, w_opt)
         records.append(subsampling_confidence_interval(
-            saa, f_opt, b=b_of(N), m=m, rng=np.random.default_rng(ss),
+            saa, f_opt, b=b_of(N), m=m_of(N), rng=np.random.default_rng(ss),
             w_opt=w_opt, levels=levels, workers=workers, resolve=resolve,
             progress=progress))
     return records
@@ -302,7 +311,7 @@ def clt_replication_study(sampler, solve, sample_sizes, R, n_ref,
 
 def coverage_study(sampler, solve, sample_sizes, R, n_ref,
                    levels=(0.90, 0.95, 0.99), ci_of=None, warm_start=True,
-                   workers=1, progress=None):
+                   workers=1, progress=None, ref_solve=None):
     """Monte-Carlo coverage test for the SAA confidence intervals.
 
     For each N in ``sample_sizes`` run ``R`` replications: form a size-N sample,
@@ -332,7 +341,10 @@ def coverage_study(sampler, solve, sample_sizes, R, n_ref,
     reference control ``w_ref``.  ``ci_of(saa, w_opt, f_opt) -> ci`` builds the
     interval; the default is the plug-in CI (:func:`plugin_confidence_interval`,
     one extra rollout -- no re-solve -- so the cost is exactly R+1 solves per N),
-    guarded by ``_BUILD_LOCK`` because building it constructs CasADi graphs.  A
+    guarded by ``_BUILD_LOCK`` because building it constructs CasADi graphs.
+    ``ref_solve`` (default ``solve``) solves the single reference sample; pass a
+    tighter-tolerance callback than the replicate ``solve`` so J_hat_ref* matches
+    another study's reference exactly (e.g. the CLT study's J_hat_ref*).  A
     custom ``ci_of`` that builds CasADi objects must likewise guard construction
     with ``_BUILD_LOCK`` (importable from :mod:`ensemblecontrol.inference`) and stay
     internally serial when ``workers > 1``; a subsampling ``ci_of`` would cost
@@ -356,7 +368,11 @@ def coverage_study(sampler, solve, sample_sizes, R, n_ref,
     levels = tuple(levels)
     ref_sampler, *rep_samplers = sampler.spawn(1 + R)
 
-    _, w_ref, f_ref = solve(ref_sampler.sample(n_ref))   # inner map threaded
+    # Reference J*_{n_ref} proxy: solved with ref_solve (default: solve) so a study
+    # can compute it at a tighter tolerance than its many replicate solves, keeping
+    # J_hat_ref* identical to another study's reference (e.g. the CLT study's).
+    ref_solve = ref_solve or solve
+    _, w_ref, f_ref = ref_solve(ref_sampler.sample(n_ref))   # inner map threaded
     w_ref = np.asarray(w_ref, dtype=float)
     f_ref = float(f_ref)
     w0 = w_ref if warm_start else None
@@ -417,3 +433,90 @@ def coverage_study(sampler, solve, sample_sizes, R, n_ref,
             "w_ref": w_ref, "q": int(w_ref.size), "R": int(R),
             "levels": list(levels), "indicators_by_N": indicators_by_N,
             "bounds_by_N": bounds_by_N}
+
+
+# -- monotonicity diagnostic for the SAA optimal-value means ------------------
+
+def _values_by_N(run_or_values):
+    """Coerce a study result / loaded run / plain mapping to ``{int N: ndarray[R]}``."""
+    if "values_by_N" in run_or_values:
+        src = run_or_values["values_by_N"]
+    elif "results" in run_or_values:
+        src = {rec["N"]: rec["values"] for rec in run_or_values["results"]}
+    else:
+        src = run_or_values
+    return {int(N): np.asarray(v, dtype=float) for N, v in src.items()}
+
+
+def monotonicity_check(run_or_values, nested=True):
+    """Adjacent-difference monotonicity diagnostic for the SAA optimal-value means.
+
+    For a minimization the theoretical means ``m_N = E[Jhat_N*]`` are nondecreasing in
+    N (optimistic bias, Prop. 5.6), but the Monte-Carlo estimates
+    ``mhat_N = mean_r Jhat_N*^(r)`` need not be, because of finite-R noise.  For each
+    adjacent pair N1 < N2 this returns the estimated gap ``delta = mhat_N2 - mhat_N1``,
+    its standard error, the z-score ``delta / se``, and a status label separating
+    harmless MC noise from a genuine violation.  The aim is diagnosis -- NOT forcing the
+    estimated curve to be monotone.
+
+    ``nested=True`` is the design used by :func:`clt_replication_study` and
+    :func:`optimal_value_study` (replicate r draws max(N) scenarios once and size-N uses
+    the nested prefix), so the two sizes are paired replicate-by-replicate and
+    ``se = std(Jhat_N2^(r) - Jhat_N1^(r), ddof=1)/sqrt(R)`` -- the correct, much tighter
+    standard error for the difference of two positively-correlated means.  It requires
+    equal R across sizes (raises ``ValueError`` otherwise).  ``nested=False`` treats the
+    sizes as independent and uses ``se = sqrt(se(mhat_N2)^2 + se(mhat_N1)^2)``.
+
+    ``run_or_values`` may be a study result (has ``values_by_N``), a loaded run (has
+    ``results``), or a plain ``{N: values}`` mapping.  Returns one row dict per adjacent
+    pair with keys ``N1, N2, m1, m2, delta, se, z, status``; ``status`` is ``"OK"``
+    (delta >= 0), ``"compatible with MC noise"`` (delta < 0 but z >= -2), or
+    ``"potential issue"`` (z < -2).
+    """
+    vals = _values_by_N(run_or_values)
+    sizes = sorted(vals)
+    rows = []
+    for N1, N2 in zip(sizes[:-1], sizes[1:]):
+        v1, v2 = vals[N1], vals[N2]
+        m1, m2 = float(v1.mean()), float(v2.mean())
+        delta = m2 - m1
+        if nested:
+            if v1.size != v2.size:
+                raise ValueError(
+                    "nested=True needs equal R across sizes (N=%d has R=%d, N=%d has "
+                    "R=%d); pass nested=False for independent samples"
+                    % (N1, v1.size, N2, v2.size))
+            D = v2 - v1
+            se = float(D.std(ddof=1) / np.sqrt(D.size)) if D.size > 1 else 0.0
+        else:
+            se1 = v1.std(ddof=1) / np.sqrt(v1.size) if v1.size > 1 else 0.0
+            se2 = v2.std(ddof=1) / np.sqrt(v2.size) if v2.size > 1 else 0.0
+            se = float(np.hypot(se1, se2))
+        if se > 0:
+            z = delta / se
+        else:
+            z = 0.0 if delta == 0 else float(np.copysign(np.inf, delta))
+        if delta >= 0:
+            status = "OK"
+        elif z >= -2:
+            status = "compatible with MC noise"
+        else:
+            status = "potential issue"
+        rows.append({"N1": N1, "N2": N2, "m1": m1, "m2": m2,
+                     "delta": delta, "se": se, "z": z, "status": status})
+    return rows
+
+
+def format_monotonicity_table(rows):
+    """Plain-text table for :func:`monotonicity_check` rows.
+
+    Columns: ``N1, N2, m_N1, m_N2, Delta, se(Delta), z, status``.  Returns a string.
+    """
+    header = ("%4s %4s %13s %13s %12s %11s %8s  %s"
+              % ("N1", "N2", "m_N1", "m_N2", "Delta", "se(Delta)", "z", "status"))
+    lines = [header, "-" * len(header)]
+    for r in rows:
+        lines.append("%4d %4d %13.6f %13.6f %12.6f %11.6f %8.2f  %s"
+                     % (r["N1"], r["N2"], r["m1"], r["m2"], r["delta"],
+                        r["se"], r["z"], r["status"]))
+    return "\n".join(lines)

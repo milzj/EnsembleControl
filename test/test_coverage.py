@@ -74,7 +74,7 @@ def test_coverage_latex_table_content():
                                caption="My caption", label="tab:cov")
     assert "\\toprule" in tex and "\\bottomrule" in tex and "\\midrule" in tex
     assert "My caption" in tex and "tab:cov" in tex
-    assert "$1-\\alpha = 0.90$" in tex and "$1-\\alpha = 0.95$" in tex
+    assert "$1-\\beta = 0.90$" in tex and "$1-\\beta = 0.95$" in tex
     # N=32, level 0.90 -> coverage 9/10 = 0.900 and its lower bound at delta=0.05
     assert "0.900" in tex
     bound = probability_lower_bound(10, 9, 0.05)
@@ -87,21 +87,21 @@ def test_coverage_latex_table_content():
 def test_coverage_latex_table_delta_subscript(delta, sub):
     # powers of ten render as 10^{k} (any exponent); other deltas stay decimal
     tex = coverage_latex_table(synthetic_study(), deltas=(delta,))
-    assert ("$\\underline{p}_{%s}$" % sub) in tex
+    assert ("$\\widehat{p}_{R,%s}(L)$" % sub) in tex
     assert "1e-0" not in tex          # never leak python's e-notation
 
 
 def test_coverage_latex_table_mixed_deltas_render_each():
     tex = coverage_latex_table(synthetic_study(), deltas=(0.05, 1e-6))
-    assert "$\\underline{p}_{0.05}$" in tex
-    assert "$\\underline{p}_{10^{-6}}$" in tex
+    assert "$\\widehat{p}_{R,0.05}(L)$" in tex
+    assert "$\\widehat{p}_{R,10^{-6}}(L)$" in tex
 
 
 def test_coverage_latex_table_multiple_deltas_adds_columns():
     one = coverage_latex_table(synthetic_study(), deltas=(0.05,))
     two = coverage_latex_table(synthetic_study(), deltas=(0.05, 0.1))
     # each level gains one lower-bound column per extra delta
-    assert two.count("underline") == one.count("underline") + 2
+    assert two.count("widehat") == one.count("widehat") + 2
 
 
 # -- save / load round-trip --------------------------------------------------
