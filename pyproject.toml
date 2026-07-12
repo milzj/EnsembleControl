@@ -7,7 +7,7 @@ requires = ["setuptools>=61.0.0", "wheel"]
 name = "ensemblecontrol"
 authors = [
     {name = "Johannes Milz"}]
-version = "0.0.2.dev0"
+version = "0.0.4"
 description = "Ensemble control for ODEs"
 # "readme" the description field in your package, see: https://python-poetry.org/docs/pyproject/#readme
 readme = "README.md"
@@ -23,18 +23,16 @@ dependencies = [
     "pandas[output-formatting]",
 ]
 
+[project.urls]
+Homepage = "https://github.com/milzj/EnsembleControl"
+Repository = "https://github.com/milzj/EnsembleControl"
+
 [project.optional-dependencies]
 test = [
    "flake8", # Formatting: https://flake8.pycqa.org/en/latest/user/error-codes.html
    "mypy", # Input/Output consistency
    "pytest", # Testing suite
    "pytest-cov" # Coverage reports
-]
-
-docs = [
-    "jupyter-book", # Required to build documentation
-    "jupytext", # Required to convert .py to .ipynb files
-    "ipython!=8.7.0" # https://github.com/ipython/ipython/issues/13845
 ]
 
 binder = [ # Required to interface with Binder when having a Dockerfile in root
@@ -45,12 +43,11 @@ pypi = [
     "build" # Used for building wheels and uploading to pypi
 ]
 
-all = ["ensemblecontrol[test,docs,binder,pypi]"]
+all = ["ensemblecontrol[test,binder,pypi]"]
 
 [tool.mypy]
 ignore_missing_imports = true # Does not show errors when importing untyped libraries
 exclude = [ # We only want mypy to consider files that are not generated in installing or building documentation
-    "docs/",
     "build/"
 ]
 files = [  # Folder to which files that should be checked by mypy
@@ -69,7 +66,3 @@ addopts = [
 testpaths = [
     "test"
 ]
-
-# Pair notebooks with python files
-[tool.jupytext]
-formats = "demos///ipynb,demos///py:percent"

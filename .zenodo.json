@@ -1,0 +1,20 @@
+{
+    "title": "EnsembleControl: Optimal control with an ensemble of dynamical systems",
+    "upload_type": "software",
+    "description": "A Python package for solving optimal control problems governed by an ensemble of parameterized dynamical systems (ODEs), arising as sample average approximations of risk-neutral and risk-averse optimal control problems.",
+    "license": "MIT",
+    "creators": [
+        {
+            "name": "Milz, Johannes",
+            "orcid": "0000-0003-3601-3340",
+            "affiliation": "Georgia Institute of Technology"
+        }
+    ],
+    "keywords": [
+        "optimal control",
+        "sample average approximation",
+        "ensemble control",
+        "uncertainty quantification",
+        "CasADi"
+    ]
+}

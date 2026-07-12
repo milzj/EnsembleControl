@@ -104,7 +104,8 @@ The following figure depicts the nominal (left/top) and reference solutions
 
 ## Documentation
 
-None.
+The problem formulation is described above, and runnable examples are available in
+the [demo](/demo) folder.
 
 The control problem is discretized using a multiple shooting approach
 following [Direct multiple shooting](https://github.com/casadi/casadi/blob/main/docs/examples/python/direct_multiple_shooting.py).

@@ -1,0 +1,16 @@
+\begin{table}[t]
+  \centering
+  \caption{Estimated coverage of the plug-in confidence interval (Algorithm 1) for the SAA optimal value of the harmonic oscillator. The population optimum is proxied by the SAA optimal value on an independent reference sample of size $N_{\mathrm{ref}} = 4096$. For each training size $N$ and nominal level $1-\beta$, $L/R$ is the empirical coverage over $R=5000$ replications and $\widehat p_{R,\delta}(L)$ is the $(1-\delta)$ lower confidence bound on the true coverage.}
+  \label{tab:coverage_plugin}
+  \begin{tabular}{rcccccc}
+    \toprule
+     & \multicolumn{2}{c}{$1-\beta = 0.90$} & \multicolumn{2}{c}{$1-\beta = 0.95$} & \multicolumn{2}{c}{$1-\beta = 0.99$} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+    $N$ & $L/R$ & $\widehat{p}_{R,10^{-6}}(L)$ & $L/R$ & $\widehat{p}_{R,10^{-6}}(L)$ & $L/R$ & $\widehat{p}_{R,10^{-6}}(L)$ \\
+    \midrule
+    32 & 0.957 & 0.941 & 0.979 & 0.968 & 0.994 & 0.987 \\
+    64 & 0.984 & 0.974 & 0.995 & 0.988 & 0.999 & 0.995 \\
+    128 & 0.992 & 0.985 & 0.998 & 0.992 & 1.000 & 0.997 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

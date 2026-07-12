@@ -1,0 +1,20 @@
+Subsampling confidence intervals for the SAA optimal value (Algorithm 2)
+Delta_r = sqrt(b) (J*_I_r - J_hat_N*)
+
+N = 32  (b = 19, m = 640)
+  J_hat_N* = -3.69045709e-01
+  90% CI: quantile_lo = -1.588962e-02  quantile_hi =  1.273365e-02  [-3.71296721e-01, -3.66236795e-01]
+  95% CI: quantile_lo = -1.789387e-02  quantile_hi =  1.483254e-02  [-3.71667756e-01, -3.65882489e-01]
+  99% CI: quantile_lo = -2.221990e-02  quantile_hi =  1.862344e-02  [-3.72337898e-01, -3.65117749e-01]
+
+N = 64  (b = 35, m = 640)
+  J_hat_N* = -3.68849661e-01
+  90% CI: quantile_lo = -1.592215e-02  quantile_hi =  1.407865e-02  [-3.70609492e-01, -3.66859392e-01]
+  95% CI: quantile_lo = -1.938236e-02  quantile_hi =  1.698462e-02  [-3.70972738e-01, -3.66426865e-01]
+  99% CI: quantile_lo = -2.410924e-02  quantile_hi =  2.223128e-02  [-3.71628570e-01, -3.65836006e-01]
+
+N = 128  (b = 64, m = 640)
+  J_hat_N* = -3.67961804e-01
+  90% CI: quantile_lo = -1.697322e-02  quantile_hi =  1.674946e-02  [-3.69442261e-01, -3.66461569e-01]
+  95% CI: quantile_lo = -2.204867e-02  quantile_hi =  1.905326e-02  [-3.69645890e-01, -3.66012958e-01]
+  99% CI: quantile_lo = -3.101940e-02  quantile_hi =  2.388570e-02  [-3.70073022e-01, -3.65220051e-01]

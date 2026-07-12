@@ -9,7 +9,7 @@ class CSTR(ensemblecontrol.ControlProblem):
 
         super().__init__()
 
-        self._alpha = 1e-2
+        self._alpha = 0.0
         self._nintervals = 50
         self._final_time = 0.2
         self._ncontrols = 3
